@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Laundry Directory - Peta & Daftar Usaha</title>
+  
+  <title>Laundry Directory — Cari Laundry, Cuci Sepatu & Cleaning Terdekat</title>
   <meta name="description" content="Temukan tempat laundry kiloan, cuci sepatu, home cleaning, cuci sofa, dan jasa kebersihan terdekat berbasis peta interaktif.">
-
-  <!-- LEAFLET CSS -->
+  <meta name="google-site-verification" content="Lz23lW4FOmydAmSHlSiGtVdlSU-ZqM5EPjQEBGRnMmk" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <style>
@@ -60,7 +60,7 @@
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
     .card { background: var(--card-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.5rem; }
     .card-img { width: 100%; height: 160px; object-fit: cover; border-radius: 6px; }
-    .card-title { color: var(--primary); font-weight: 700; text-decoration: none; font-size: 1.05rem; cursor: pointer; }
+    .card-title { color: var(--primary); font-weight: 700; text-decoration: none; font-size: 1.05rem; }
     .badge { background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; width: fit-content; }
 
     .pagination { display: flex; justify-content: center; gap: 0.3rem; margin: 1.5rem 0; flex-wrap: wrap; }
@@ -68,12 +68,10 @@
     .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
     .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    /* HALAMAN DETAIL (PENGGANTI POP-UP) */
-    .view-section { display: none; }
-    .view-section.active { display: block; }
-
-    .detail-container { background: var(--surface); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border); margin-top: 1rem; display: flex; flex-direction: column; gap: 1rem; }
-    .detail-img { width: 100%; max-height: 350px; object-fit: cover; border-radius: 6px; }
+    /* SLOT IKLAN BANNER STYLING */
+    .ad-slot-container { width: 100%; max-width: 1000px; margin: 0.8rem auto; padding: 0 1rem; }
+    .ad-banner-link { display: block; width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .ad-banner-img { width: 100%; height: auto; max-height: 180px; object-fit: cover; display: block; }
 
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; padding: 1rem; }
     .modal.active { display: flex; }
@@ -89,7 +87,11 @@
 
     footer { background: var(--footer-bg); color: var(--footer-text); padding: 1.5rem 1rem; margin-top: auto; border-top: 1px solid var(--border); }
     .footer-container { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; align-items: center; text-align: center; }
+    .footer-links { display: flex; gap: 1.2rem; flex-wrap: wrap; justify-content: center; }
+    .footer-links a { color: var(--footer-text); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
     .copyright { font-size: 0.85rem; opacity: 0.9; }
+
+    @media (min-width: 640px) { .footer-container { flex-direction: row; justify-content: space-between; text-align: left; } }
 
     .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 0.8rem 1.5rem; border-radius: 999px; font-size: 0.85rem; font-weight: 600; z-index: 3000; display: none; text-align: center; max-width: 90%; }
     .toast.warning { background: #f59e0b; color: #000; }
@@ -100,73 +102,64 @@
 
   <header>
     <div>
-      <h1><a href="./">Laundry Directory</a></h1>
-      <small id="user-status-text" style="opacity: 0.8;">Memuat status...</small>
+      <h1><a href="/">Laundry Directory</a></h1>
+      <small style="opacity: 0.8;" id="user-status-text">Memuat status...</small>
     </div>
     <div class="header-actions">
       <button class="btn btn-dark" id="dark-mode-toggle">🌙 Mode Gelap</button>
       <div id="auth-buttons-wrapper">
-        <button class="btn btn-primary" id="open-login-btn">🔑 Login / Register</button>
+        <a href="./directory/auth.html" class="btn btn-primary">🔑 Login / Register</a>
       </div>
     </div>
   </header>
 
-  <!-- VIEW UTAMA: PETA & DAFTAR -->
-  <div id="home-view" class="view-section active">
-    <div id="map"></div>
-    <main class="container">
-      <div class="controls">
-        <input type="text" id="search" placeholder="Cari laundry, cuci sepatu, kota...">
-        <button class="btn btn-primary" id="add-data-btn" style="display:none;">+ Tambah Usaha</button>
-      </div>
+  <!-- SLOT IKLAN UTAMA: SETELAH HEADER -->
+  <div id="ad-slot-main-top" class="ad-slot-container"></div>
 
-      <div class="grid" id="data-list">
-        <div style="grid-column: 1/-1; text-align: center; padding: 2rem;">Memuat data usaha...</div>
-      </div>
+  <div id="map"></div>
 
-      <div class="pagination" id="pagination" style="display: none;">
-        <button class="page-btn" id="p-first">&lt;&lt;</button>
-        <button class="page-btn" id="p-prev">&lt;</button>
-        <div id="p-numbers" style="display: flex; gap: 0.3rem;"></div>
-        <button class="page-btn" id="p-next">&gt;</button>
-        <button class="page-btn" id="p-last">&gt;&gt;</button>
-      </div>
-    </main>
-  </div>
-
-  <!-- VIEW DETAIL HALAMAN (MENGGANTIKAN POP-UP) -->
-  <div id="detail-view" class="view-section">
-    <div class="container">
-      <a href="./" class="btn btn-secondary" style="margin-bottom: 1rem;">← Kembali ke Beranda</a>
-      <div class="detail-container">
-        <h2 id="d-title" style="color:var(--primary); font-size:1.5rem;">Nama Usaha</h2>
-        <img id="d-img" class="detail-img" src="" alt="Foto Usaha">
-        <div><strong>Kategori:</strong> <span id="d-category">-</span></div>
-        <div><strong>Kota:</strong> <span id="d-city">-</span></div>
-        <div><strong>Alamat Lengkap:</strong> <span id="d-address">-</span></div>
-        <div style="display:flex; gap:0.5rem; margin-top:1rem; flex-wrap:wrap;">
-          <a id="d-wa" href="#" target="_blank" class="btn btn-primary" style="flex:1; text-align:center;">💬 Hubungi WhatsApp</a>
-          <a id="d-maps" href="#" target="_blank" class="btn btn-secondary" style="flex:1; text-align:center;">📍 Petunjuk Arah</a>
-        </div>
-      </div>
+  <main class="container">
+    <div class="controls">
+      <input type="text" id="search" placeholder="Cari laundry, cuci sepatu, kota...">
+      <button id="add-data-btn" class="btn btn-primary" style="display:none;">+ Tambah Usaha</button>
     </div>
-  </div>
+
+    <div id="data-list" class="grid">
+      <div style="grid-column: 1/-1; text-align: center; padding: 2rem;">Memuat data usaha...</div>
+    </div>
+
+    <div class="pagination" id="pagination" style="display: none;">
+      <button class="page-btn" id="p-first">&lt;&lt;</button>
+      <button class="page-btn" id="p-prev">&lt;</button>
+      <div id="p-numbers" style="display: flex; gap: 0.3rem;"></div>
+      <button class="page-btn" id="p-next">&gt;</button>
+      <button class="page-btn" id="p-last">&gt;&gt;</button>
+    </div>
+  </main>
+
+  <!-- SLOT IKLAN UTAMA: SEBELUM FOOTER -->
+  <div id="ad-slot-main-bottom" class="ad-slot-container"></div>
 
   <footer>
     <div class="footer-container">
+      <div class="footer-links">
+        <a href="./directory/about.html">Tentang Kami</a>
+        <a href="./directory/contact.html">Kontak</a>
+        <a href="./directory/auth.html">Login / Registrasi</a>
+      </div>
       <div class="copyright">
-        &#169; <span id="current-year"></span> Laundry Directory. Hak Cipta Dilindungi.
+        &copy; <span id="current-year"></span> Laundry Directory V3. Hak Cipta Dilindungi.
       </div>
     </div>
   </footer>
 
-  <!-- MODAL TAMBAH/EDIT USAHA -->
+  <!-- FORM MODAL TAMBAH/EDIT USAHA -->
   <div class="modal" id="add-modal">
     <div class="modal-content">
-      <h2 id="modal-title" style="color:var(--primary); margin-bottom:1rem;">Tambah Usaha Baru</h2>
+      <h2 style="color:var(--primary); margin-bottom:1rem;" id="modal-title">Tambah Usaha Baru</h2>
       <form id="add-form">
         <input type="hidden" id="f-id">
-        <div class="form-group"><label>Nama Usaha</label><input type="text" id="f-name" placeholder="Contoh: Bandar Laundry" required></div>
+        <div class="form-group"><label>Nama Usaha</label><input type="text" id="f-name" required placeholder="Contoh: Bandar Laundry"></div>
         <div class="form-group"><label>Kategori</label>
           <select id="f-category" required>
             <option value="Laundry Kiloan">Laundry Kiloan</option>
@@ -178,9 +171,28 @@
           </select>
         </div>
 
-        <div class="form-group"><label>Kota / Kabupaten</label><input type="text" id="f-city" placeholder="Ketik nama kota (misal: Bogor)" required></div>
-        <div class="form-group"><label>Alamat Jalan</label><input type="text" id="f-address" placeholder="Jl. Raya No. 12" required></div>
-        <div class="form-group"><label>URL Foto Usaha</label><input type="url" id="f-img" placeholder="https://..."></div>
+        <div class="form-group"><label>Provinsi</label>
+          <select id="f-province" required>
+            <option value="">-- Pilih Provinsi --</option>
+            <option value="Jawa Barat">Jawa Barat</option>
+            <option value="DKI Jakarta">DKI Jakarta</option>
+            <option value="Jawa Tengah">Jawa Tengah</option>
+            <option value="Jawa Timur">Jawa Timur</option>
+            <option value="Banten">Banten</option>
+            <option value="Bali">Bali</option>
+          </select>
+        </div>
+
+        <div class="form-group"><label>Kota / Kabupaten</label><input type="text" id="f-city" required placeholder="Ketik nama kota (misal: Bogor)"></div>
+        <div class="form-group"><label>Alamat Jalan</label><input type="text" id="f-address" required placeholder="Jl. Raya No. 12"></div>
+
+        <div class="form-group">
+          <label>URL Gambar/Foto Usaha (Opsional, Maks 3 Image)</label>
+          <div id="image-inputs-container" style="display:flex; flex-direction:column; gap:0.4rem;">
+            <input type="url" class="f-img-input" placeholder="URL Gambar 1 (Utama/Thumbnail)">
+          </div>
+          <button type="button" class="btn btn-secondary" id="add-img-col-btn" style="margin-top:0.4rem; font-size:0.75rem; width:fit-content;">+ Tambah Kolom Gambar</button>
+        </div>
 
         <div class="form-group">
           <label>Pilih Lokasi di Peta</label>
@@ -188,30 +200,21 @@
         </div>
 
         <div class="coord-container">
-          <div class="form-group"><label>Latitude</label><input type="number" id="f-lat" step="any" readonly required style="background:var(--border);"></div>
-          <div class="form-group"><label>Longitude</label><input type="number" id="f-lng" step="any" readonly required style="background:var(--border);"></div>
+          <div class="form-group">
+            <label>Latitude</label>
+            <input type="number" step="any" id="f-lat" required readonly style="background:var(--border);">
+          </div>
+          <div class="form-group">
+            <label>Longitude</label>
+            <input type="number" step="any" id="f-lng" required readonly style="background:var(--border);">
+          </div>
         </div>
 
-        <div class="form-group"><label>WhatsApp</label><input type="text" id="f-wa" placeholder="085712345678" required></div>
+        <div class="form-group"><label>WhatsApp</label><input type="text" id="f-wa" required placeholder="085712345678"></div>
 
         <div style="display:flex; gap:0.5rem; margin-top:1rem;">
-          <button type="submit" class="btn btn-primary" style="flex:1;">Simpan Data</button>
+          <button type="submit" class="btn btn-primary" style="flex:1;">Simpan Data Usaha</button>
           <button type="button" class="btn btn-secondary" id="close-modal-btn">Batal</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL AUTH / LOGIN -->
-  <div class="modal" id="auth-modal">
-    <div class="modal-content" style="max-width: 400px;">
-      <h2 style="color:var(--primary); margin-bottom:1rem;">Login Akun</h2>
-      <form id="login-form">
-        <div class="form-group"><label>Email</label><input type="email" id="l-email" required></div>
-        <div class="form-group"><label>Password</label><input type="password" id="l-password" required></div>
-        <div style="display:flex; gap:0.5rem; margin-top:1rem;">
-          <button type="submit" class="btn btn-primary" style="flex:1;">Login</button>
-          <button type="button" class="btn btn-secondary" id="close-auth-modal">Batal</button>
         </div>
       </form>
     </div>
@@ -219,14 +222,12 @@
 
   <div class="toast" id="toast"></div>
 
-  <!-- LEAFLET JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- FIREBASE SCRIPT & ROUTING LOGIC -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAY2JOM_GK_c8MIKOOROjG61XtC-VxF3Gc",
@@ -242,15 +243,20 @@
     const auth = getAuth(app);
 
     let mainMap, mainMarkersGroup, pickerMap, pickerMarker;
-    let rawData = [], filteredData = [];
+    let rawData = [], filteredData = [], galleryImages = [];
     let currentPage = 1;
     const PER_PAGE = 12;
     let currentUser = null, isAdminUser = false;
 
     const INDONESIA_BOUNDS = L.latLngBounds(L.latLng(-11.1, 95.0), L.latLng(6.2, 141.0));
 
-    function createSlug(name) {
-      return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    function getBasePath() {
+      const segments = window.location.pathname.split('/').filter(Boolean);
+      return window.location.hostname.includes('github.io') && segments.length > 0 ? '/' + segments[0] : '';
+    }
+
+    function createSlug(text) {
+      return text ? text.toString().toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '') : '';
     }
 
     function showToast(msg, type = "info") {
@@ -275,6 +281,59 @@
       localStorage.setItem("theme", isDark ? "dark" : "light");
       darkToggle.innerText = isDark ? "☀️ Mode Terang" : "🌙 Mode Gelap";
     };
+
+    // RENDER IKLAN BANNER DINAMIS
+    async function renderAds() {
+      try {
+        const snap = await getDocs(collection(db, "advertisements"));
+        const ads = [];
+        snap.forEach(d => ads.push({ id: d.id, ...d.data() }));
+
+        const slotMainTop = document.getElementById("ad-slot-main-top");
+        const slotMainBottom = document.getElementById("ad-slot-main-bottom");
+
+        if (slotMainTop) slotMainTop.innerHTML = "";
+        if (slotMainBottom) slotMainBottom.innerHTML = "";
+
+        ads.forEach(ad => {
+          if (!ad.imageUrl || !ad.linkUrl) return;
+          const adHtml = `<a href="${ad.linkUrl}" target="_blank" class="ad-banner-link"><img src="${ad.imageUrl}" class="ad-banner-img" alt="Iklan Banner"></a>`;
+          if (ad.placement === 'main_top' && slotMainTop) slotMainTop.innerHTML = adHtml;
+          if (ad.placement === 'main_bottom' && slotMainBottom) slotMainBottom.innerHTML = adHtml;
+        });
+      } catch (err) { console.error("Ad render error:", err); }
+    }
+
+    const imgContainer = document.getElementById("image-inputs-container");
+    const addImgBtn = document.getElementById("add-img-col-btn");
+
+    addImgBtn.onclick = () => {
+      const currentInputs = imgContainer.querySelectorAll(".f-img-input");
+      if (currentInputs.length < 3) {
+        const newInput = document.createElement("input");
+        newInput.type = "url";
+        newInput.className = "f-img-input";
+        newInput.placeholder = `URL Gambar ${currentInputs.length + 1}`;
+        imgContainer.appendChild(newInput);
+        if (imgContainer.querySelectorAll(".f-img-input").length >= 3) addImgBtn.style.display = "none";
+      }
+    };
+
+    function resetImageInputs(urls = []) {
+      imgContainer.innerHTML = "";
+      addImgBtn.style.display = "inline-block";
+      const count = Math.max(1, urls.length);
+      for (let i = 0; i < count; i++) {
+        if (i >= 3) break;
+        const input = document.createElement("input");
+        input.type = "url";
+        input.className = "f-img-input";
+        input.placeholder = `URL Gambar ${i + 1}`;
+        input.value = urls[i] || "";
+        imgContainer.appendChild(input);
+      }
+      if (imgContainer.querySelectorAll(".f-img-input").length >= 3) addImgBtn.style.display = "none";
+    }
 
     function initMainMap() {
       if (mainMap) mainMap.remove();
@@ -302,58 +361,31 @@
 
     async function loadData() {
       try {
-        const snap = await getDocs(collection(db, "businesses"));
+        try {
+          const gSnap = await getDocs(collection(db, "adminGallery"));
+          galleryImages = [];
+          gSnap.forEach(d => galleryImages.push(d.data().url));
+        } catch (gErr) {}
+
+        let snap = await getDocs(query(collection(db, "businesses"), where("status", "==", "active")));
         rawData = [];
-        snap.forEach(d => {
-          const data = d.data();
-          rawData.push({ id: d.id, slug: createSlug(data.name), ...data });
-        });
-        
-        checkRoute();
+        snap.forEach(d => rawData.push({ id: d.id, ...d.data() }));
+
+        if (rawData.length === 0) {
+          const allSnap = await getDocs(collection(db, "businesses"));
+          rawData = [];
+          allSnap.forEach(d => rawData.push({ id: d.id, ...d.data() }));
+        }
+
+        applyFilter();
       } catch (err) {
         document.getElementById("data-list").innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ef4444; padding:2rem;">Gagal memuat data: ${err.message}</div>`;
       }
     }
 
-    // ROUTING BERBASIS URL SLUG (Contoh: index.html?slug=nama-usaha)
-    function checkRoute() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const slug = urlParams.get('slug');
-
-      if (slug) {
-        const item = rawData.find(d => d.slug === slug);
-        if (item) {
-          renderDetailPage(item);
-        } else {
-          document.getElementById("d-title").innerText = "Usaha Tidak Ditemukan";
-          document.getElementById("detail-view").classList.add("active");
-          document.getElementById("home-view").classList.remove("active");
-        }
-      } else {
-        document.getElementById("home-view").classList.add("active");
-        document.getElementById("detail-view").classList.remove("active");
-        applyFilter();
-      }
-    }
-
-    function renderDetailPage(item) {
-      document.getElementById("home-view").classList.remove("active");
-      document.getElementById("detail-view").classList.add("active");
-
-      document.getElementById("d-title").innerText = item.name;
-      document.getElementById("d-img").src = item.imageUrl || "https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=600";
-      document.getElementById("d-category").innerText = item.category;
-      document.getElementById("d-city").innerText = item.city;
-      document.getElementById("d-address").innerText = item.address;
-      document.getElementById("d-wa").href = `https://wa.me/${item.whatsapp}`;
-      document.getElementById("d-maps").href = `https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}`;
-      
-      document.title = `${item.name} - Laundry Directory`;
-    }
-
     function applyFilter() {
       const kw = document.getElementById("search").value.toLowerCase().trim();
-      filteredData = rawData.filter(d => `${d.name} ${d.category} ${d.city} ${d.address}`.toLowerCase().includes(kw));
+      filteredData = rawData.filter(d => `${d.name} ${d.category} ${d.city} ${d.province || ''} ${d.address}`.toLowerCase().includes(kw));
       currentPage = 1;
       updateMapMarkers();
       renderList();
@@ -363,12 +395,18 @@
       if (!mainMarkersGroup) return;
       mainMarkersGroup.clearLayers();
       const bounds = [];
+      const basePath = getBasePath();
 
       filteredData.forEach(d => {
         if (d.latitude && d.longitude) {
           bounds.push([d.latitude, d.longitude]);
+          const catSlug = createSlug(d.category) || 'laundry';
+          const citySlug = createSlug(d.city) || 'lokasi';
+          const itemSlug = d.slug || createSlug(d.name);
+          const detailUrl = `${basePath}/${catSlug}/${citySlug}/${itemSlug}`;
+
           const m = L.marker([d.latitude, d.longitude]);
-          m.bindPopup(`<b>${d.name}</b><br>${d.category}<br>📍 ${d.city}<br><a href="?slug=${d.slug}">Lihat Halaman Detail</a>`);
+          m.bindPopup(`<b>${d.name}</b><br>${d.category}<br>📍 ${d.city}<br><a href="${detailUrl}">Buka Detail</a>`);
           mainMarkersGroup.addLayer(m);
         }
       });
@@ -379,6 +417,7 @@
     function renderList() {
       const listEl = document.getElementById("data-list");
       listEl.innerHTML = "";
+      const basePath = getBasePath();
 
       if (filteredData.length === 0) {
         listEl.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:2rem;">Belum ada data usaha terdaftar.</div>`;
@@ -391,18 +430,24 @@
       const pageItems = filteredData.slice(start, start + PER_PAGE);
 
       pageItems.forEach(d => {
+        const catSlug = createSlug(d.category) || 'laundry';
+        const citySlug = createSlug(d.city) || 'lokasi';
+        const itemSlug = d.slug || createSlug(d.name);
+        const detailUrl = `${basePath}/${catSlug}/${citySlug}/${itemSlug}`;
+
         const canEdit = currentUser && (isAdminUser || (d.ownerId && d.ownerId === currentUser.uid));
-        const displayThumb = d.imageUrl || "https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=600";
+        const defaultRandom = galleryImages.length > 0 ? galleryImages[Math.floor(Math.random() * galleryImages.length)] : "https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=600";
+        const displayThumb = (d.images && d.images.length > 0 && d.images[0]) ? d.images[0] : (d.imageUrl || defaultRandom);
 
         const card = document.createElement("div");
         card.className = "card";
         card.innerHTML = `
           <img src="${displayThumb}" class="card-img" alt="${d.name}">
           <span class="badge">${d.category}</span>
-          <a href="?slug=${d.slug}" class="card-title">${d.name}</a>
+          <a href="${detailUrl}" class="card-title">${d.name}</a>
           <small style="color:var(--text-muted);">📍 ${d.address}, ${d.city}</small>
           <div style="display:flex; gap:0.4rem; margin-top:0.3rem;">
-            <a href="?slug=${d.slug}" class="btn btn-secondary" style="font-size:0.75rem; flex:1; text-align:center;">Buka Detail</a>
+            <a href="${detailUrl}" class="btn btn-secondary" style="font-size:0.75rem; flex:1; text-align:center;">Buka Detail →</a>
             ${canEdit ? `<button class="btn btn-primary" style="font-size:0.75rem;" id="edit-b-${d.id}">Edit</button>` : ''}
           </div>
         `;
@@ -410,8 +455,8 @@
 
         if (canEdit) {
           setTimeout(() => {
-            const editBtn = document.getElementById(`edit-b-${d.id}`);
-            if (editBtn) editBtn.onclick = () => openModalForEdit(d);
+            const btn = document.getElementById(`edit-b-${d.id}`);
+            if (btn) btn.onclick = () => openModalForEdit(d);
           }, 0);
         }
       });
@@ -446,7 +491,7 @@
       document.getElementById("p-last").onclick = () => { currentPage = totalPages; renderList(); };
     }
 
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
       currentUser = user;
       const statusText = document.getElementById("user-status-text");
       const authWrapper = document.getElementById("auth-buttons-wrapper");
@@ -455,60 +500,63 @@
       if (user) {
         statusText.innerText = `Logged in: ${user.email}`;
         isAdminUser = (user.email === 'bandardeterjen@gmail.com');
-        authWrapper.innerHTML = `<button class="btn btn-danger" id="logout-btn">Logout</button>`;
+
+        authWrapper.innerHTML = `
+          ${isAdminUser ? `<a href="./directory/admin.html" class="btn btn-primary">Dashboard Admin</a>` : ''}
+          <button class="btn btn-danger" id="logout-btn">Logout</button>
+        `;
         addBtn.style.display = "inline-block";
 
         document.getElementById("logout-btn").onclick = async () => {
           await signOut(auth);
           currentUser = null;
           isAdminUser = false;
-          checkRoute();
+          renderList();
         };
       } else {
         currentUser = null;
         isAdminUser = false;
-        statusText.innerText = `GitHub Pages Directory`;
-        authWrapper.innerHTML = `<button class="btn btn-primary" id="open-login-btn">🔑 Login / Register</button>`;
+        statusText.innerText = `Peta & Katalog Usaha`;
+        authWrapper.innerHTML = `<a href="./directory/auth.html" class="btn btn-primary">🔑 Login / Register</a>`;
         addBtn.style.display = "none";
-        document.getElementById("open-login-btn").onclick = () => document.getElementById("auth-modal").classList.add("active");
       }
-      checkRoute();
+
+      renderList();
     });
 
-    document.getElementById("open-login-btn").onclick = () => document.getElementById("auth-modal").classList.add("active");
-    document.getElementById("close-auth-modal").onclick = () => document.getElementById("auth-modal").classList.remove("active");
-
-    document.getElementById("login-form").onsubmit = async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("l-email").value;
-      const pass = document.getElementById("l-password").value;
-      try {
-        await signInWithEmailAndPassword(auth, email, pass);
-        document.getElementById("auth-modal").classList.remove("active");
-        showToast("Login berhasil!", "success");
-      } catch (err) {
-        showToast("Gagal login: " + err.message, "warning");
-      }
-    };
-
     function openModalForEdit(d) {
-      document.getElementById("modal-title").innerText = `Edit Usaha: ${d.name}`;
+      document.getElementById("modal-title").innerText = isAdminUser ? `Edit Usaha: ${d.name} (Admin)` : "Edit Usaha Milik Anda";
       document.getElementById("f-id").value = d.id;
       document.getElementById("f-name").value = d.name;
       document.getElementById("f-category").value = d.category;
+      document.getElementById("f-province").value = d.province || '';
       document.getElementById("f-city").value = d.city;
       document.getElementById("f-address").value = d.address;
-      document.getElementById("f-img").value = d.imageUrl || "";
       document.getElementById("f-wa").value = d.whatsapp;
+
+      resetImageInputs(d.images || (d.imageUrl ? [d.imageUrl] : []));
 
       document.getElementById("add-modal").classList.add("active");
       setTimeout(() => { initPickerMap(); setPickerLocation(d.latitude, d.longitude); pickerMap.invalidateSize(); }, 200);
     }
 
-    document.getElementById("add-data-btn").onclick = () => {
-      document.getElementById("modal-title").innerText = "Tambah Usaha Baru";
+    document.getElementById("add-data-btn").onclick = async () => {
+      if (!currentUser) return;
+
+      if (!isAdminUser) {
+        const qUserBusinesses = query(collection(db, "businesses"), where("ownerId", "==", currentUser.uid));
+        const userSnap = await getDocs(qUserBusinesses);
+
+        if (!userSnap.empty) {
+          showToast("⚠️ Anda sudah menambahkan 1 listing usaha.", "warning");
+          return;
+        }
+      }
+
+      document.getElementById("modal-title").innerText = "Tambah Usaha Baru (Pending Approved)";
       document.getElementById("add-form").reset();
       document.getElementById("f-id").value = "";
+      resetImageInputs([]);
       document.getElementById("add-modal").classList.add("active");
       setTimeout(() => { initPickerMap(); if (pickerMap) pickerMap.invalidateSize(); }, 200);
     };
@@ -518,12 +566,28 @@
     document.getElementById("add-form").onsubmit = async (e) => {
       e.preventDefault();
       const id = document.getElementById("f-id").value;
+      const name = document.getElementById("f-name").value;
+
+      const userInputs = imgContainer.querySelectorAll(".f-img-input");
+      let userImages = [];
+      userInputs.forEach(input => {
+        if (input.value.trim()) userImages.push(input.value.trim());
+      });
+
+      if (userImages.length === 0) {
+        const randomFallback = galleryImages.length > 0 ? galleryImages[Math.floor(Math.random() * galleryImages.length)] : "https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=600";
+        userImages.push(randomFallback);
+      }
+
       const payload = {
-        name: document.getElementById("f-name").value,
+        name,
+        slug: createSlug(name),
         category: document.getElementById("f-category").value,
+        province: document.getElementById("f-province").value,
         city: document.getElementById("f-city").value,
         address: document.getElementById("f-address").value,
-        imageUrl: document.getElementById("f-img").value,
+        images: userImages,
+        imageUrl: userImages[0],
         latitude: parseFloat(document.getElementById("f-lat").value),
         longitude: parseFloat(document.getElementById("f-lng").value),
         whatsapp: document.getElementById("f-wa").value
@@ -535,10 +599,12 @@
           showToast("Data usaha berhasil diperbarui!", "success");
         } else {
           payload.ownerId = currentUser.uid;
+          payload.status = isAdminUser ? "active" : "pending";
           payload.createdAt = serverTimestamp();
           await addDoc(collection(db, "businesses"), payload);
-          showToast("Usaha berhasil ditambahkan!", "success");
+          showToast(isAdminUser ? "Usaha berhasil ditambahkan!" : "Usaha berhasil diajukan!", "success");
         }
+
         document.getElementById("add-modal").classList.remove("active");
         loadData();
       } catch (err) { showToast("Error: " + err.message, "error"); }
@@ -546,6 +612,7 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       initMainMap();
+      renderAds();
       loadData();
       document.getElementById("search").addEventListener("input", applyFilter);
     });
