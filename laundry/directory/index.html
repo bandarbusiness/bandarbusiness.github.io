@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <title>Laundry Directory — Cari Laundry, Cuci Sepatu & Cleaning Terdekat</title>
+  <title>Laundry Directory - Peta & Daftar Usaha</title>
   <meta name="description" content="Temukan tempat laundry kiloan, cuci sepatu, home cleaning, cuci sofa, dan jasa kebersihan terdekat berbasis peta interaktif.">
 
+  <!-- LEAFLET CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <style>
@@ -60,17 +60,13 @@
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
     .card { background: var(--card-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.5rem; }
     .card-img { width: 100%; height: 160px; object-fit: cover; border-radius: 6px; }
-    .card-title { color: var(--primary); font-weight: 700; text-decoration: none; font-size: 1.05rem; }
+    .card-title { color: var(--primary); font-weight: 700; text-decoration: none; font-size: 1.05rem; cursor: pointer; }
     .badge { background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; width: fit-content; }
 
     .pagination { display: flex; justify-content: center; gap: 0.3rem; margin: 1.5rem 0; flex-wrap: wrap; }
     .page-btn { padding: 0.4rem 0.8rem; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 4px; cursor: pointer; }
     .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
     .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .ad-slot-container { width: 100%; max-width: 1000px; margin: 0.8rem auto; padding: 0 1rem; }
-    .ad-banner-link { display: block; width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .ad-banner-img { width: 100%; height: auto; max-height: 180px; object-fit: cover; display: block; }
 
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; padding: 1rem; }
     .modal.active { display: flex; }
@@ -86,11 +82,7 @@
 
     footer { background: var(--footer-bg); color: var(--footer-text); padding: 1.5rem 1rem; margin-top: auto; border-top: 1px solid var(--border); }
     .footer-container { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; align-items: center; text-align: center; }
-    .footer-links { display: flex; gap: 1.2rem; flex-wrap: wrap; justify-content: center; }
-    .footer-links a { color: var(--footer-text); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
     .copyright { font-size: 0.85rem; opacity: 0.9; }
-
-    @media (min-width: 640px) { .footer-container { flex-direction: row; justify-content: space-between; text-align: left; } }
 
     .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 0.8rem 1.5rem; border-radius: 999px; font-size: 0.85rem; font-weight: 600; z-index: 3000; display: none; text-align: center; max-width: 90%; }
     .toast.warning { background: #f59e0b; color: #000; }
@@ -102,27 +94,25 @@
   <header>
     <div>
       <h1><a href="./">Laundry Directory</a></h1>
-      <small style="opacity: 0.8;" id="user-status-text">Memuat status...</small>
+      <small id="user-status-text" style="opacity: 0.8;">Memuat status...</small>
     </div>
     <div class="header-actions">
       <button class="btn btn-dark" id="dark-mode-toggle">🌙 Mode Gelap</button>
       <div id="auth-buttons-wrapper">
-        <a href="./auth.html" class="btn btn-primary">🔑 Login / Register</a>
+        <button class="btn btn-primary" id="open-login-btn">🔑 Login / Register</button>
       </div>
     </div>
   </header>
-
-  <div id="ad-slot-main-top" class="ad-slot-container"></div>
 
   <div id="map"></div>
 
   <main class="container">
     <div class="controls">
       <input type="text" id="search" placeholder="Cari laundry, cuci sepatu, kota...">
-      <button id="add-data-btn" class="btn btn-primary" style="display:none;">+ Tambah Usaha</button>
+      <button class="btn btn-primary" id="add-data-btn" style="display:none;">+ Tambah Usaha</button>
     </div>
 
-    <div id="data-list" class="grid">
+    <div class="grid" id="data-list">
       <div style="grid-column: 1/-1; text-align: center; padding: 2rem;">Memuat data usaha...</div>
     </div>
 
@@ -135,27 +125,32 @@
     </div>
   </main>
 
-  <div id="ad-slot-main-bottom" class="ad-slot-container"></div>
-
   <footer>
     <div class="footer-container">
-      <div class="footer-links">
-        <a href="./about.html">Tentang Kami</a>
-        <a href="./contact.html">Kontak</a>
-        <a href="./auth.html">Login / Registrasi</a>
-      </div>
       <div class="copyright">
-        &copy; <span id="current-year"></span> Laundry Directory. Hak Cipta Dilindungi.
+        &#169; <span id="current-year"></span> Laundry Directory. Hak Cipta Dilindungi.
       </div>
     </div>
   </footer>
 
+  <!-- MODAL DETAIL USAHA -->
+  <div class="modal" id="detail-modal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+        <h2 id="d-modal-name" style="color:var(--primary); font-size:1.2rem;">Nama Usaha</h2>
+        <button class="btn btn-secondary" id="close-detail-modal" style="padding:0.3rem 0.6rem;">✕</button>
+      </div>
+      <div id="d-modal-body" style="display:flex; flex-direction:column; gap:0.8rem;"></div>
+    </div>
+  </div>
+
+  <!-- MODAL TAMBAH/EDIT USAHA -->
   <div class="modal" id="add-modal">
     <div class="modal-content">
-      <h2 style="color:var(--primary); margin-bottom:1rem;" id="modal-title">Tambah Usaha Baru</h2>
+      <h2 id="modal-title" style="color:var(--primary); margin-bottom:1rem;">Tambah Usaha Baru</h2>
       <form id="add-form">
         <input type="hidden" id="f-id">
-        <div class="form-group"><label>Nama Usaha</label><input type="text" id="f-name" required placeholder="Contoh: Bandar Laundry"></div>
+        <div class="form-group"><label>Nama Usaha</label><input type="text" id="f-name" placeholder="Contoh: Bandar Laundry" required></div>
         <div class="form-group"><label>Kategori</label>
           <select id="f-category" required>
             <option value="Laundry Kiloan">Laundry Kiloan</option>
@@ -167,28 +162,9 @@
           </select>
         </div>
 
-        <div class="form-group"><label>Provinsi</label>
-          <select id="f-province" required>
-            <option value="">-- Pilih Provinsi --</option>
-            <option value="Jawa Barat">Jawa Barat</option>
-            <option value="DKI Jakarta">DKI Jakarta</option>
-            <option value="Jawa Tengah">Jawa Tengah</option>
-            <option value="Jawa Timur">Jawa Timur</option>
-            <option value="Banten">Banten</option>
-            <option value="Bali">Bali</option>
-          </select>
-        </div>
-
-        <div class="form-group"><label>Kota / Kabupaten</label><input type="text" id="f-city" required placeholder="Ketik nama kota (misal: Bogor)"></div>
-        <div class="form-group"><label>Alamat Jalan</label><input type="text" id="f-address" required placeholder="Jl. Raya No. 12"></div>
-
-        <div class="form-group">
-          <label>URL Gambar/Foto Usaha (Opsional, Maks 3 Image)</label>
-          <div id="image-inputs-container" style="display:flex; flex-direction:column; gap:0.4rem;">
-            <input type="url" class="f-img-input" placeholder="URL Gambar 1 (Utama/Thumbnail)">
-          </div>
-          <button type="button" class="btn btn-secondary" id="add-img-col-btn" style="margin-top:0.4rem; font-size:0.75rem; width:fit-content;">+ Tambah Kolom Gambar</button>
-        </div>
+        <div class="form-group"><label>Kota / Kabupaten</label><input type="text" id="f-city" placeholder="Ketik nama kota (misal: Bogor)" required></div>
+        <div class="form-group"><label>Alamat Jalan</label><input type="text" id="f-address" placeholder="Jl. Raya No. 12" required></div>
+        <div class="form-group"><label>URL Foto Usaha</label><input type="url" id="f-img" placeholder="https://..."></div>
 
         <div class="form-group">
           <label>Pilih Lokasi di Peta</label>
@@ -196,21 +172,30 @@
         </div>
 
         <div class="coord-container">
-          <div class="form-group">
-            <label>Latitude</label>
-            <input type="number" step="any" id="f-lat" required readonly style="background:var(--border);">
-          </div>
-          <div class="form-group">
-            <label>Longitude</label>
-            <input type="number" step="any" id="f-lng" required readonly style="background:var(--border);">
-          </div>
+          <div class="form-group"><label>Latitude</label><input type="number" id="f-lat" step="any" readonly required style="background:var(--border);"></div>
+          <div class="form-group"><label>Longitude</label><input type="number" id="f-lng" step="any" readonly required style="background:var(--border);"></div>
         </div>
 
-        <div class="form-group"><label>WhatsApp</label><input type="text" id="f-wa" required placeholder="085712345678"></div>
+        <div class="form-group"><label>WhatsApp</label><input type="text" id="f-wa" placeholder="085712345678" required></div>
 
         <div style="display:flex; gap:0.5rem; margin-top:1rem;">
-          <button type="submit" class="btn btn-primary" style="flex:1;">Simpan Data Usaha</button>
+          <button type="submit" class="btn btn-primary" style="flex:1;">Simpan Data</button>
           <button type="button" class="btn btn-secondary" id="close-modal-btn">Batal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL AUTH / LOGIN -->
+  <div class="modal" id="auth-modal">
+    <div class="modal-content" style="max-width: 400px;">
+      <h2 style="color:var(--primary); margin-bottom:1rem;">Login Akun</h2>
+      <form id="login-form">
+        <div class="form-group"><label>Email</label><input type="email" id="l-email" required></div>
+        <div class="form-group"><label>Password</label><input type="password" id="l-password" required></div>
+        <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+          <button type="submit" class="btn btn-primary" style="flex:1;">Login</button>
+          <button type="button" class="btn btn-secondary" id="close-auth-modal">Batal</button>
         </div>
       </form>
     </div>
@@ -218,12 +203,14 @@
 
   <div class="toast" id="toast"></div>
 
+  <!-- LEAFLET JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+  <!-- FIREBASE SCRIPT & MAIN LOGIC -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAY2JOM_GK_c8MIKOOROjG61XtC-VxF3Gc",
@@ -239,16 +226,12 @@
     const auth = getAuth(app);
 
     let mainMap, mainMarkersGroup, pickerMap, pickerMarker;
-    let rawData = [], filteredData = [], galleryImages = [];
+    let rawData = [], filteredData = [];
     let currentPage = 1;
     const PER_PAGE = 12;
     let currentUser = null, isAdminUser = false;
 
     const INDONESIA_BOUNDS = L.latLngBounds(L.latLng(-11.1, 95.0), L.latLng(6.2, 141.0));
-
-    function createSlug(text) {
-      return text ? text.toString().toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '') : '';
-    }
 
     function showToast(msg, type = "info") {
       const toast = document.getElementById("toast");
@@ -272,58 +255,6 @@
       localStorage.setItem("theme", isDark ? "dark" : "light");
       darkToggle.innerText = isDark ? "☀️ Mode Terang" : "🌙 Mode Gelap";
     };
-
-    async function renderAds() {
-      try {
-        const snap = await getDocs(collection(db, "advertisements"));
-        const ads = [];
-        snap.forEach(d => ads.push({ id: d.id, ...d.data() }));
-
-        const slotMainTop = document.getElementById("ad-slot-main-top");
-        const slotMainBottom = document.getElementById("ad-slot-main-bottom");
-
-        if (slotMainTop) slotMainTop.innerHTML = "";
-        if (slotMainBottom) slotMainBottom.innerHTML = "";
-
-        ads.forEach(ad => {
-          if (!ad.imageUrl || !ad.linkUrl) return;
-          const adHtml = `<a href="${ad.linkUrl}" target="_blank" class="ad-banner-link"><img src="${ad.imageUrl}" class="ad-banner-img" alt="Iklan Banner"></a>`;
-          if (ad.placement === 'main_top' && slotMainTop) slotMainTop.innerHTML = adHtml;
-          if (ad.placement === 'main_bottom' && slotMainBottom) slotMainBottom.innerHTML = adHtml;
-        });
-      } catch (err) { console.error("Ad render error:", err); }
-    }
-
-    const imgContainer = document.getElementById("image-inputs-container");
-    const addImgBtn = document.getElementById("add-img-col-btn");
-
-    addImgBtn.onclick = () => {
-      const currentInputs = imgContainer.querySelectorAll(".f-img-input");
-      if (currentInputs.length < 3) {
-        const newInput = document.createElement("input");
-        newInput.type = "url";
-        newInput.className = "f-img-input";
-        newInput.placeholder = `URL Gambar ${currentInputs.length + 1}`;
-        imgContainer.appendChild(newInput);
-        if (imgContainer.querySelectorAll(".f-img-input").length >= 3) addImgBtn.style.display = "none";
-      }
-    };
-
-    function resetImageInputs(urls = []) {
-      imgContainer.innerHTML = "";
-      addImgBtn.style.display = "inline-block";
-      const count = Math.max(1, urls.length);
-      for (let i = 0; i < count; i++) {
-        if (i >= 3) break;
-        const input = document.createElement("input");
-        input.type = "url";
-        input.className = "f-img-input";
-        input.placeholder = `URL Gambar ${i + 1}`;
-        input.value = urls[i] || "";
-        imgContainer.appendChild(input);
-      }
-      if (imgContainer.querySelectorAll(".f-img-input").length >= 3) addImgBtn.style.display = "none";
-    }
 
     function initMainMap() {
       if (mainMap) mainMap.remove();
@@ -351,22 +282,9 @@
 
     async function loadData() {
       try {
-        try {
-          const gSnap = await getDocs(collection(db, "adminGallery"));
-          galleryImages = [];
-          gSnap.forEach(d => galleryImages.push(d.data().url));
-        } catch (gErr) {}
-
-        let snap = await getDocs(query(collection(db, "businesses"), where("status", "==", "active")));
+        const snap = await getDocs(collection(db, "businesses"));
         rawData = [];
         snap.forEach(d => rawData.push({ id: d.id, ...d.data() }));
-
-        if (rawData.length === 0) {
-          const allSnap = await getDocs(collection(db, "businesses"));
-          rawData = [];
-          allSnap.forEach(d => rawData.push({ id: d.id, ...d.data() }));
-        }
-
         applyFilter();
       } catch (err) {
         document.getElementById("data-list").innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ef4444; padding:2rem;">Gagal memuat data: ${err.message}</div>`;
@@ -375,7 +293,7 @@
 
     function applyFilter() {
       const kw = document.getElementById("search").value.toLowerCase().trim();
-      filteredData = rawData.filter(d => `${d.name} ${d.category} ${d.city} ${d.province || ''} ${d.address}`.toLowerCase().includes(kw));
+      filteredData = rawData.filter(d => `${d.name} ${d.category} ${d.city} ${d.address}`.toLowerCase().includes(kw));
       currentPage = 1;
       updateMapMarkers();
       renderList();
@@ -389,13 +307,8 @@
       filteredData.forEach(d => {
         if (d.latitude && d.longitude) {
           bounds.push([d.latitude, d.longitude]);
-          
-          // FORMAT QUERY STRING (DIJAMIN TIDAK AKAN 404 DI SUBFOLDER)
-          const targetSlug = d.slug || createSlug(d.name);
-          const detailUrl = `./detail.html?slug=${targetSlug}`;
-
           const m = L.marker([d.latitude, d.longitude]);
-          m.bindPopup(`<b>${d.name}</b><br>${d.category}<br>📍 ${d.city}<br><a href="${detailUrl}">Buka Detail</a>`);
+          m.bindPopup(`<b>${d.name}</b><br>${d.category}<br>📍 ${d.city}<br><a href="#" onclick="window.openDetailModal('${d.id}');return false;">Lihat Detail</a>`);
           mainMarkersGroup.addLayer(m);
         }
       });
@@ -418,38 +331,59 @@
       const pageItems = filteredData.slice(start, start + PER_PAGE);
 
       pageItems.forEach(d => {
-        // FORMAT QUERY STRING (DIJAMIN TIDAK AKAN 404 DI SUBFOLDER)
-        const targetSlug = d.slug || createSlug(d.name);
-        const detailUrl = `./detail.html?slug=${targetSlug}`;
-
         const canEdit = currentUser && (isAdminUser || (d.ownerId && d.ownerId === currentUser.uid));
-        const defaultRandom = galleryImages.length > 0 ? galleryImages[Math.floor(Math.random() * galleryImages.length)] : "https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=600";
-        const displayThumb = (d.images && d.images.length > 0 && d.images[0]) ? d.images[0] : (d.imageUrl || defaultRandom);
+        const displayThumb = d.imageUrl || "https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=600";
 
         const card = document.createElement("div");
         card.className = "card";
         card.innerHTML = `
           <img src="${displayThumb}" class="card-img" alt="${d.name}">
           <span class="badge">${d.category}</span>
-          <a href="${detailUrl}" class="card-title">${d.name}</a>
+          <span class="card-title" id="title-${d.id}">${d.name}</span>
           <small style="color:var(--text-muted);">📍 ${d.address}, ${d.city}</small>
           <div style="display:flex; gap:0.4rem; margin-top:0.3rem;">
-            <a href="${detailUrl}" class="btn btn-secondary" style="font-size:0.75rem; flex:1; text-align:center;">Buka Detail →</a>
+            <button class="btn btn-secondary" style="font-size:0.75rem; flex:1;" id="detail-b-${d.id}">Quick View</button>
             ${canEdit ? `<button class="btn btn-primary" style="font-size:0.75rem;" id="edit-b-${d.id}">Edit</button>` : ''}
           </div>
         `;
         listEl.appendChild(card);
 
-        if (canEdit) {
-          setTimeout(() => {
-            const btn = document.getElementById(`edit-b-${d.id}`);
-            if (btn) btn.onclick = () => openModalForEdit(d);
-          }, 0);
-        }
+        setTimeout(() => {
+          document.getElementById(`title-${d.id}`).onclick = () => openDetailModal(d.id);
+          document.getElementById(`detail-b-${d.id}`).onclick = () => openDetailModal(d.id);
+          if (canEdit) {
+            const editBtn = document.getElementById(`edit-b-${d.id}`);
+            if (editBtn) editBtn.onclick = () => openModalForEdit(d);
+          }
+        }, 0);
       });
 
       renderPaginationControls(totalPages);
     }
+
+    window.openDetailModal = function(id) {
+      const d = rawData.find(item => item.id === id);
+      if (!d) return;
+
+      document.getElementById("d-modal-name").innerText = d.name;
+      const bodyEl = document.getElementById("d-modal-body");
+      const thumb = d.imageUrl || "https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=600";
+
+      bodyEl.innerHTML = `
+        <img src="${thumb}" style="width:100%; height:200px; object-fit:cover; border-radius:6px;" alt="${d.name}"/>
+        <div><strong>Kategori:</strong> ${d.category}</div>
+        <div><strong>Alamat:</strong> ${d.address}, ${d.city}</div>
+        <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+          <a href="https://wa.me/${d.whatsapp}" target="_blank" class="btn btn-primary" style="flex:1; text-align:center;">💬 Hubungi WhatsApp</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=${d.latitude},${d.longitude}" target="_blank" class="btn btn-secondary" style="flex:1; text-align:center;">📍 Petunjuk Arah</a>
+        </div>
+      `;
+      document.getElementById("detail-modal").classList.add("active");
+    };
+
+    document.getElementById("close-detail-modal").onclick = () => {
+      document.getElementById("detail-modal").classList.remove("active");
+    };
 
     function renderPaginationControls(totalPages) {
       const pContainer = document.getElementById("pagination");
@@ -478,7 +412,7 @@
       document.getElementById("p-last").onclick = () => { currentPage = totalPages; renderList(); };
     }
 
-    onAuthStateChanged(auth, async (user) => {
+    onAuthStateChanged(auth, (user) => {
       currentUser = user;
       const statusText = document.getElementById("user-status-text");
       const authWrapper = document.getElementById("auth-buttons-wrapper");
@@ -487,11 +421,7 @@
       if (user) {
         statusText.innerText = `Logged in: ${user.email}`;
         isAdminUser = (user.email === 'bandardeterjen@gmail.com');
-
-        authWrapper.innerHTML = `
-          ${isAdminUser ? `<a href="./admin.html" class="btn btn-primary">Dashboard Admin</a>` : ''}
-          <button class="btn btn-danger" id="logout-btn">Logout</button>
-        `;
+        authWrapper.innerHTML = `<button class="btn btn-danger" id="logout-btn">Logout</button>`;
         addBtn.style.display = "inline-block";
 
         document.getElementById("logout-btn").onclick = async () => {
@@ -503,47 +433,48 @@
       } else {
         currentUser = null;
         isAdminUser = false;
-        statusText.innerText = `Peta & Katalog Usaha`;
-        authWrapper.innerHTML = `<a href="./auth.html" class="btn btn-primary">🔑 Login / Register</a>`;
+        statusText.innerText = `GitHub Pages Directory`;
+        authWrapper.innerHTML = `<button class="btn btn-primary" id="open-login-btn">🔑 Login / Register</button>`;
         addBtn.style.display = "none";
+        document.getElementById("open-login-btn").onclick = () => document.getElementById("auth-modal").classList.add("active");
       }
-
       renderList();
     });
 
+    document.getElementById("open-login-btn").onclick = () => document.getElementById("auth-modal").classList.add("active");
+    document.getElementById("close-auth-modal").onclick = () => document.getElementById("auth-modal").classList.remove("active");
+
+    document.getElementById("login-form").onsubmit = async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("l-email").value;
+      const pass = document.getElementById("l-password").value;
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        document.getElementById("auth-modal").classList.remove("active");
+        showToast("Login berhasil!", "success");
+      } catch (err) {
+        showToast("Gagal login: " + err.message, "warning");
+      }
+    };
+
     function openModalForEdit(d) {
-      document.getElementById("modal-title").innerText = isAdminUser ? `Edit Usaha: ${d.name} (Admin)` : "Edit Usaha Milik Anda";
+      document.getElementById("modal-title").innerText = `Edit Usaha: ${d.name}`;
       document.getElementById("f-id").value = d.id;
       document.getElementById("f-name").value = d.name;
       document.getElementById("f-category").value = d.category;
-      document.getElementById("f-province").value = d.province || '';
       document.getElementById("f-city").value = d.city;
       document.getElementById("f-address").value = d.address;
+      document.getElementById("f-img").value = d.imageUrl || "";
       document.getElementById("f-wa").value = d.whatsapp;
-
-      resetImageInputs(d.images || (d.imageUrl ? [d.imageUrl] : []));
 
       document.getElementById("add-modal").classList.add("active");
       setTimeout(() => { initPickerMap(); setPickerLocation(d.latitude, d.longitude); pickerMap.invalidateSize(); }, 200);
     }
 
-    document.getElementById("add-data-btn").onclick = async () => {
-      if (!currentUser) return;
-
-      if (!isAdminUser) {
-        const qUserBusinesses = query(collection(db, "businesses"), where("ownerId", "==", currentUser.uid));
-        const userSnap = await getDocs(qUserBusinesses);
-
-        if (!userSnap.empty) {
-          showToast("⚠️ Anda sudah menambahkan 1 listing usaha.", "warning");
-          return;
-        }
-      }
-
-      document.getElementById("modal-title").innerText = "Tambah Usaha Baru (Pending Approved)";
+    document.getElementById("add-data-btn").onclick = () => {
+      document.getElementById("modal-title").innerText = "Tambah Usaha Baru";
       document.getElementById("add-form").reset();
       document.getElementById("f-id").value = "";
-      resetImageInputs([]);
       document.getElementById("add-modal").classList.add("active");
       setTimeout(() => { initPickerMap(); if (pickerMap) pickerMap.invalidateSize(); }, 200);
     };
@@ -553,28 +484,12 @@
     document.getElementById("add-form").onsubmit = async (e) => {
       e.preventDefault();
       const id = document.getElementById("f-id").value;
-      const name = document.getElementById("f-name").value;
-
-      const userInputs = imgContainer.querySelectorAll(".f-img-input");
-      let userImages = [];
-      userInputs.forEach(input => {
-        if (input.value.trim()) userImages.push(input.value.trim());
-      });
-
-      if (userImages.length === 0) {
-        const randomFallback = galleryImages.length > 0 ? galleryImages[Math.floor(Math.random() * galleryImages.length)] : "https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=600";
-        userImages.push(randomFallback);
-      }
-
       const payload = {
-        name,
-        slug: createSlug(name),
+        name: document.getElementById("f-name").value,
         category: document.getElementById("f-category").value,
-        province: document.getElementById("f-province").value,
         city: document.getElementById("f-city").value,
         address: document.getElementById("f-address").value,
-        images: userImages,
-        imageUrl: userImages[0],
+        imageUrl: document.getElementById("f-img").value,
         latitude: parseFloat(document.getElementById("f-lat").value),
         longitude: parseFloat(document.getElementById("f-lng").value),
         whatsapp: document.getElementById("f-wa").value
@@ -586,12 +501,10 @@
           showToast("Data usaha berhasil diperbarui!", "success");
         } else {
           payload.ownerId = currentUser.uid;
-          payload.status = isAdminUser ? "active" : "pending";
           payload.createdAt = serverTimestamp();
           await addDoc(collection(db, "businesses"), payload);
-          showToast(isAdminUser ? "Usaha berhasil ditambahkan!" : "Usaha berhasil diajukan!", "success");
+          showToast("Usaha berhasil ditambahkan!", "success");
         }
-
         document.getElementById("add-modal").classList.remove("active");
         loadData();
       } catch (err) { showToast("Error: " + err.message, "error"); }
@@ -599,7 +512,6 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       initMainMap();
-      renderAds();
       loadData();
       document.getElementById("search").addEventListener("input", applyFilter);
     });
