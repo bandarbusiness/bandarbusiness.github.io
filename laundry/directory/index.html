@@ -108,7 +108,7 @@
     <div class="header-actions">
       <button class="btn btn-dark" id="dark-mode-toggle">🌙 Mode Gelap</button>
       <div id="auth-buttons-wrapper">
-        <a href="./auth.html" class="btn btn-primary">🔑 Login / Register</a>
+        <a href="../auth.html" class="btn btn-primary">🔑 Login / Register</a>
       </div>
     </div>
   </header>
@@ -143,9 +143,9 @@
   <footer>
     <div class="footer-container">
       <div class="footer-links">
-        <a href="./about.html">Tentang Kami</a>
-        <a href="./contact.html">Kontak</a>
-        <a href="./auth.html">Login / Registrasi</a>
+        <a href="../about.html">Tentang Kami</a>
+        <a href="../contact.html">Kontak</a>
+        <a href="../auth.html">Login / Registrasi</a>
       </div>
       <div class="copyright">
         &copy; <span id="current-year"></span> Laundry Directory V3. Hak Cipta Dilindungi.
@@ -502,7 +502,7 @@
         isAdminUser = (user.email === 'bandardeterjen@gmail.com');
 
         authWrapper.innerHTML = `
-          ${isAdminUser ? `<a href="./admin.html" class="btn btn-primary">Dashboard Admin</a>` : ''}
+          ${isAdminUser ? `<a href="../admin.html" class="btn btn-primary">Dashboard Admin</a>` : ''}
           <button class="btn btn-danger" id="logout-btn">Logout</button>
         `;
         addBtn.style.display = "inline-block";
@@ -517,7 +517,7 @@
         currentUser = null;
         isAdminUser = false;
         statusText.innerText = `Peta & Katalog Usaha`;
-        authWrapper.innerHTML = `<a href="./auth.html" class="btn btn-primary">🔑 Login / Register</a>`;
+        authWrapper.innerHTML = `<a href="../auth.html" class="btn btn-primary">🔑 Login / Register</a>`;
         addBtn.style.display = "none";
       }
 
