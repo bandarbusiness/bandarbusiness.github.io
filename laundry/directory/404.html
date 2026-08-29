@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title id="seo-title">Memuat Detail Usaha... — Laundry Directory V3</title>
+  <title id="seo-title">Memuat Detail Usaha... — Laundry Directory</title>
   <meta id="seo-desc" name="description" content="Lihat alamat lengkap, nomor WhatsApp, lokasi peta, dan layanan usaha kebersihan.">
   <link id="seo-canonical" rel="canonical" href="" />
 
   <meta property="og:type" content="business.business" />
-  <meta property="og:site_name" content="Laundry Directory V3" />
+  <meta property="og:site_name" content="Laundry Directory" />
   <meta id="og-title" property="og:title" content="Memuat Detail Usaha..." />
   <meta id="og-desc" property="og:description" content="Informasi detail layanan laundry dan kebersihan." />
   <meta id="og-url" property="og:url" content="" />
@@ -54,7 +54,6 @@
     </div>
   </header>
 
-  <!-- SLOT IKLAN DETAIL: SETELAH HEADER -->
   <div id="ad-slot-detail-top" class="ad-slot-container"></div>
 
   <main class="container">
@@ -63,12 +62,11 @@
     </article>
   </main>
 
-  <!-- SLOT IKLAN DETAIL: SEBELUM FOOTER -->
   <div id="ad-slot-detail-bottom" class="ad-slot-container"></div>
 
   <footer>
     <div style="text-align: center; font-size: 0.85rem;">
-      &copy; <span id="current-year"></span> Laundry Directory V3. Hak Cipta Dilindungi.
+      &copy; <span id="current-year"></span> Laundry Directory. Hak Cipta Dilindungi.
     </div>
   </footer>
 
@@ -90,6 +88,13 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    function getBasePath() {
+      const path = window.location.pathname;
+      if (path.startsWith('/direktori')) return '/direktori';
+      const segments = path.split('/').filter(Boolean);
+      return window.location.hostname.includes('github.io') && segments.length > 0 ? '/' + segments[0] : '';
+    }
+
     document.getElementById("current-year").innerText = new Date().getFullYear();
 
     const darkToggle = document.getElementById("dark-mode-toggle");
@@ -104,7 +109,6 @@
       darkToggle.innerText = isDark ? "☀️ Mode Terang" : "🌙 Mode Gelap";
     };
 
-    // RENDER IKLAN DETAIL
     async function renderAds() {
       try {
         const snap = await getDocs(collection(db, "advertisements"));
@@ -129,7 +133,11 @@
     document.addEventListener("DOMContentLoaded", async () => {
       renderAds();
 
-      // PARSING SLUG DARI URL
+      const basePath = getBasePath();
+      const homeLink = document.getElementById("home-link");
+      if (homeLink) homeLink.href = `${basePath}/`;
+
+      // BACA SEGMEN SLUG AKHIR DARI URL
       const pathSegments = window.location.pathname.split('/').filter(Boolean);
       let slug = pathSegments[pathSegments.length - 1];
 
@@ -138,7 +146,7 @@
         slug = urlParams.get("slug");
       }
 
-      if (!slug || slug === 'directory/index.html' || slug === 'directory/404.html') {
+      if (!slug || slug === 'index.html' || slug === '404.html' || slug === 'detail.html') {
         showError("URL tidak valid.");
         return;
       }
@@ -205,7 +213,7 @@
       const imgs = (b.images && b.images.length > 0) ? b.images : [b.imageUrl || 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=1200'];
       const thumbUrl = imgs[0];
 
-      const pageTitle = `${b.name} ${b.city} — ${b.category} | Laundry Directory V3`;
+      const pageTitle = `${b.name} ${b.city} — ${b.category} | Laundry Directory`;
       const pageDesc = `${b.name} di ${b.city}, ${b.province || ''} melayani ${b.category}. Alamat: ${b.address}. Hubungi WhatsApp dan lihat lokasi peta.`;
 
       document.title = pageTitle;
@@ -242,10 +250,11 @@
     }
 
     function showError(msg) {
+      const basePath = getBasePath();
       document.getElementById("content").innerHTML = `
         <h2 style="color:#ef4444;">Usaha Tidak Ditemukan</h2>
         <p style="margin-top:0.5rem;">${msg}</p>
-        <a href="./" class="btn btn-primary" style="width:fit-content; margin-top:1rem;">← Kembali ke Utama</a>
+        <a href="${basePath}/" class="btn btn-primary" style="width:fit-content; margin-top:1rem;">← Kembali ke Utama</a>
       `;
     }
   </script>
