@@ -6,7 +6,7 @@
   
   <title>Laundry Directory — Cari Laundry, Cuci Sepatu & Cleaning Terdekat</title>
   <meta name="description" content="Temukan tempat laundry kiloan, cuci sepatu, home cleaning, cuci sofa, dan jasa kebersihan terdekat berbasis peta interaktif.">
-  <meta name="google-site-verification" content="Lz23lW4FOmydAmSHlSiGtVdlSU-ZqM5EPjQEBGRnMmk" />
+
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <style>
@@ -68,7 +68,6 @@
     .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
     .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    /* SLOT IKLAN BANNER STYLING */
     .ad-slot-container { width: 100%; max-width: 1000px; margin: 0.8rem auto; padding: 0 1rem; }
     .ad-banner-link { display: block; width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
     .ad-banner-img { width: 100%; height: auto; max-height: 180px; object-fit: cover; display: block; }
@@ -102,18 +101,17 @@
 
   <header>
     <div>
-      <h1><a href="/">Laundry Directory</a></h1>
+      <h1><a href="./">Laundry Directory</a></h1>
       <small style="opacity: 0.8;" id="user-status-text">Memuat status...</small>
     </div>
     <div class="header-actions">
       <button class="btn btn-dark" id="dark-mode-toggle">🌙 Mode Gelap</button>
       <div id="auth-buttons-wrapper">
-        <a href="./directory/auth.html" class="btn btn-primary">🔑 Login / Register</a>
+        <a href="./auth.html" class="btn btn-primary">🔑 Login / Register</a>
       </div>
     </div>
   </header>
 
-  <!-- SLOT IKLAN UTAMA: SETELAH HEADER -->
   <div id="ad-slot-main-top" class="ad-slot-container"></div>
 
   <div id="map"></div>
@@ -137,23 +135,21 @@
     </div>
   </main>
 
-  <!-- SLOT IKLAN UTAMA: SEBELUM FOOTER -->
   <div id="ad-slot-main-bottom" class="ad-slot-container"></div>
 
   <footer>
     <div class="footer-container">
       <div class="footer-links">
-        <a href="./directory/about.html">Tentang Kami</a>
-        <a href="./directory/contact.html">Kontak</a>
-        <a href="./directory/auth.html">Login / Registrasi</a>
+        <a href="./about.html">Tentang Kami</a>
+        <a href="./contact.html">Kontak</a>
+        <a href="./auth.html">Login / Registrasi</a>
       </div>
       <div class="copyright">
-        &copy; <span id="current-year"></span> Laundry Directory V3. Hak Cipta Dilindungi.
+        &copy; <span id="current-year"></span> Laundry Directory. Hak Cipta Dilindungi.
       </div>
     </div>
   </footer>
 
-  <!-- FORM MODAL TAMBAH/EDIT USAHA -->
   <div class="modal" id="add-modal">
     <div class="modal-content">
       <h2 style="color:var(--primary); margin-bottom:1rem;" id="modal-title">Tambah Usaha Baru</h2>
@@ -250,11 +246,6 @@
 
     const INDONESIA_BOUNDS = L.latLngBounds(L.latLng(-11.1, 95.0), L.latLng(6.2, 141.0));
 
-    function getBasePath() {
-      const segments = window.location.pathname.split('/').filter(Boolean);
-      return window.location.hostname.includes('github.io') && segments.length > 0 ? '/' + segments[0] : '';
-    }
-
     function createSlug(text) {
       return text ? text.toString().toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '') : '';
     }
@@ -282,7 +273,6 @@
       darkToggle.innerText = isDark ? "☀️ Mode Terang" : "🌙 Mode Gelap";
     };
 
-    // RENDER IKLAN BANNER DINAMIS
     async function renderAds() {
       try {
         const snap = await getDocs(collection(db, "advertisements"));
@@ -395,15 +385,14 @@
       if (!mainMarkersGroup) return;
       mainMarkersGroup.clearLayers();
       const bounds = [];
-      const basePath = getBasePath();
 
       filteredData.forEach(d => {
         if (d.latitude && d.longitude) {
           bounds.push([d.latitude, d.longitude]);
-          const catSlug = createSlug(d.category) || 'laundry';
-          const citySlug = createSlug(d.city) || 'lokasi';
-          const itemSlug = d.slug || createSlug(d.name);
-          const detailUrl = `${basePath}/${catSlug}/${citySlug}/${itemSlug}`;
+          
+          // FORMAT QUERY STRING (DIJAMIN TIDAK AKAN 404 DI SUBFOLDER)
+          const targetSlug = d.slug || createSlug(d.name);
+          const detailUrl = `./detail.html?slug=${targetSlug}`;
 
           const m = L.marker([d.latitude, d.longitude]);
           m.bindPopup(`<b>${d.name}</b><br>${d.category}<br>📍 ${d.city}<br><a href="${detailUrl}">Buka Detail</a>`);
@@ -417,7 +406,6 @@
     function renderList() {
       const listEl = document.getElementById("data-list");
       listEl.innerHTML = "";
-      const basePath = getBasePath();
 
       if (filteredData.length === 0) {
         listEl.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:2rem;">Belum ada data usaha terdaftar.</div>`;
@@ -430,10 +418,9 @@
       const pageItems = filteredData.slice(start, start + PER_PAGE);
 
       pageItems.forEach(d => {
-        const catSlug = createSlug(d.category) || 'laundry';
-        const citySlug = createSlug(d.city) || 'lokasi';
-        const itemSlug = d.slug || createSlug(d.name);
-        const detailUrl = `${basePath}/${catSlug}/${citySlug}/${itemSlug}`;
+        // FORMAT QUERY STRING (DIJAMIN TIDAK AKAN 404 DI SUBFOLDER)
+        const targetSlug = d.slug || createSlug(d.name);
+        const detailUrl = `./detail.html?slug=${targetSlug}`;
 
         const canEdit = currentUser && (isAdminUser || (d.ownerId && d.ownerId === currentUser.uid));
         const defaultRandom = galleryImages.length > 0 ? galleryImages[Math.floor(Math.random() * galleryImages.length)] : "https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=600";
@@ -502,7 +489,7 @@
         isAdminUser = (user.email === 'bandardeterjen@gmail.com');
 
         authWrapper.innerHTML = `
-          ${isAdminUser ? `<a href="./directory/admin.html" class="btn btn-primary">Dashboard Admin</a>` : ''}
+          ${isAdminUser ? `<a href="./admin.html" class="btn btn-primary">Dashboard Admin</a>` : ''}
           <button class="btn btn-danger" id="logout-btn">Logout</button>
         `;
         addBtn.style.display = "inline-block";
@@ -517,7 +504,7 @@
         currentUser = null;
         isAdminUser = false;
         statusText.innerText = `Peta & Katalog Usaha`;
-        authWrapper.innerHTML = `<a href="./directory/auth.html" class="btn btn-primary">🔑 Login / Register</a>`;
+        authWrapper.innerHTML = `<a href="./auth.html" class="btn btn-primary">🔑 Login / Register</a>`;
         addBtn.style.display = "none";
       }
 
