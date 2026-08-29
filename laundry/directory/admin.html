@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard — Laundry Directory V3</title>
+  <title>Admin Dashboard — Laundry Directory</title>
   <style>
     :root { --header-bg: #1e3a8a; --header-text: #ffffff; --footer-bg: #f97316; --footer-text: #000000; --bg: #f8fafc; --text: #000000; --border: #e2e8f0; --primary: #0284c7; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
@@ -54,7 +54,7 @@
 <body>
 
   <header>
-    <h1>Admin Panel V3</h1>
+    <h1>Admin Panel</h1>
     <div class="header-btns">
       <a href="./" class="btn btn-secondary">🌐 Ke Utama</a>
       <button id="logout-btn" class="btn btn-danger">Logout</button>
@@ -114,7 +114,7 @@
 
   <footer>
     <div class="footer-container">
-      <div>Dashboard Admin Laundry Directory V3</div>
+      <div>Dashboard Admin Laundry Directory</div>
       <div>&copy; <span id="current-year"></span> Hak Cipta Dilindungi.</div>
     </div>
   </footer>
@@ -189,6 +189,7 @@
 
   <div class="toast" id="toast"></div>
 
+  <!-- KOREKSI IMPOR SDK FIREBASE BERSIH -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -224,7 +225,7 @@
     onAuthStateChanged(auth, async (user) => {
       if (!user || user.email !== "bandardeterjen@gmail.com") {
         alert("Akses Ditolak! Khusus Super Admin.");
-        window.location.href = "./directory/auth.html";
+        window.location.href = "./auth.html";
         return;
       }
       loadAds();
@@ -233,9 +234,9 @@
       loadGallery();
     });
 
-    document.getElementById("logout-btn").onclick = () => signOut(auth).then(() => window.location.href = "./directory/auth.html");
+    document.getElementById("logout-btn").onclick = () => signOut(auth).then(() => window.location.href = "./auth.html");
 
-    // MANAJEMEN IKLAN BANNER
+    // 1. MANAJEMEN IKLAN BANNER
     const adModal = document.getElementById("ad-modal");
     document.getElementById("open-ad-modal-btn").onclick = () => {
       document.getElementById("ad-modal-title").innerText = "Tambah Iklan Baru";
@@ -267,89 +268,99 @@
 
     async function loadAds() {
       const wrapper = document.getElementById("ads-cards-wrapper");
-      const snap = await getDocs(collection(db, "advertisements"));
-      wrapper.innerHTML = "";
+      try {
+        const snap = await getDocs(collection(db, "advertisements"));
+        wrapper.innerHTML = "";
 
-      if (snap.empty) { wrapper.innerHTML = "<div>Belum ada iklan.</div>"; return; }
+        if (snap.empty) { wrapper.innerHTML = "<div>Belum ada materi iklan. Tambahkan iklan baru.</div>"; return; }
 
-      snap.forEach(d => {
-        const ad = { id: d.id, ...d.data() };
-        const card = document.createElement("div");
-        card.className = "admin-item-card";
-        card.innerHTML = `
-          <div class="admin-item-header">
-            <strong>${ad.placement}</strong>
-            <span class="badge badge-active">Aktif</span>
-          </div>
-          <img src="${ad.imageUrl}" style="width:100%; height:80px; object-fit:cover; border-radius:4px;" alt="Banner">
-          <div><small>Link:</small> <a href="${ad.linkUrl}" target="_blank">${ad.linkUrl}</a></div>
-          <div class="admin-item-actions">
-            <button class="btn btn-primary" id="edit-ad-${ad.id}">Edit Iklan</button>
-            <button class="btn btn-danger" id="del-ad-${ad.id}">Hapus</button>
-          </div>
-        `;
-        wrapper.appendChild(card);
+        snap.forEach(d => {
+          const ad = { id: d.id, ...d.data() };
+          const card = document.createElement("div");
+          card.className = "admin-item-card";
+          card.innerHTML = `
+            <div class="admin-item-header">
+              <strong>${ad.placement}</strong>
+              <span class="badge badge-active">Aktif</span>
+            </div>
+            <img src="${ad.imageUrl}" style="width:100%; height:80px; object-fit:cover; border-radius:4px;" alt="Banner">
+            <div><small>Link:</small> <a href="${ad.linkUrl}" target="_blank">${ad.linkUrl}</a></div>
+            <div class="admin-item-actions">
+              <button class="btn btn-primary" id="edit-ad-${ad.id}">Edit Iklan</button>
+              <button class="btn btn-danger" id="del-ad-${ad.id}">Hapus</button>
+            </div>
+          `;
+          wrapper.appendChild(card);
 
-        setTimeout(() => {
-          document.getElementById(`edit-ad-${ad.id}`).onclick = () => {
-            document.getElementById("ad-modal-title").innerText = "Edit Iklan";
-            document.getElementById("ad-id").value = ad.id;
-            document.getElementById("ad-image-url").value = ad.imageUrl;
-            document.getElementById("ad-target-url").value = ad.linkUrl;
-            document.getElementById("ad-placement").value = ad.placement;
-            adModal.classList.add("active");
-          };
+          setTimeout(() => {
+            document.getElementById(`edit-ad-${ad.id}`).onclick = () => {
+              document.getElementById("ad-modal-title").innerText = "Edit Iklan";
+              document.getElementById("ad-id").value = ad.id;
+              document.getElementById("ad-image-url").value = ad.imageUrl;
+              document.getElementById("ad-target-url").value = ad.linkUrl;
+              document.getElementById("ad-placement").value = ad.placement;
+              adModal.classList.add("active");
+            };
 
-          document.getElementById(`del-ad-${ad.id}`).onclick = async () => {
-            await deleteDoc(doc(db, "advertisements", ad.id));
-            showToast("Iklan dihapus!");
-            loadAds();
-          };
-        }, 0);
-      });
+            document.getElementById(`del-ad-${ad.id}`).onclick = async () => {
+              await deleteDoc(doc(db, "advertisements", ad.id));
+              showToast("Iklan dihapus!");
+              loadAds();
+            };
+          }, 0);
+        });
+      } catch (err) {
+        wrapper.innerHTML = `<div>Gagal memuat iklan: ${err.message}</div>`;
+      }
     }
 
-    // MANAJEMEN USER
+    // 2. MANAJEMEN USER
     async function loadUsers() {
-      const snap = await getDocs(collection(db, "users"));
       const wrapper = document.getElementById("user-cards-wrapper");
-      wrapper.innerHTML = "";
+      try {
+        const snap = await getDocs(collection(db, "users"));
+        wrapper.innerHTML = "";
 
-      snap.forEach(d => {
-        const u = { id: d.id, ...d.data() };
-        if (u.role === 'admin') return;
+        if (snap.empty) { wrapper.innerHTML = "<div>Belum ada data user.</div>"; return; }
 
-        const item = document.createElement("div");
-        item.className = "admin-item-card";
-        item.innerHTML = `
-          <div class="admin-item-header">
-            <strong>${u.name || 'Owner'}</strong>
-            <span class="badge ${u.status === 'approved' ? 'badge-active' : 'badge-pending'}">${u.status || 'pending'}</span>
-          </div>
-          <div><small>Email:</small> ${u.email}</div>
-          <div><small>WA:</small> ${u.phone || '-'}</div>
-          <div class="admin-item-actions">
-            ${u.status !== 'approved' ? `<button class="btn btn-success" id="app-u-${u.id}">Approve User</button>` : ''}
-            <button class="btn btn-danger" id="del-u-${u.id}">Hapus</button>
-          </div>
-        `;
-        wrapper.appendChild(item);
+        snap.forEach(d => {
+          const u = { id: d.id, ...d.data() };
+          if (u.role === 'admin') return;
 
-        setTimeout(() => {
-          if (document.getElementById(`app-u-${u.id}`)) {
-            document.getElementById(`app-u-${u.id}`).onclick = async () => {
-              await updateDoc(doc(db, "users", u.id), { status: "approved" });
-              showToast(`User approved!`);
+          const item = document.createElement("div");
+          item.className = "admin-item-card";
+          item.innerHTML = `
+            <div class="admin-item-header">
+              <strong>${u.name || 'Owner'}</strong>
+              <span class="badge ${u.status === 'approved' ? 'badge-active' : 'badge-pending'}">${u.status || 'pending'}</span>
+            </div>
+            <div><small>Email:</small> ${u.email}</div>
+            <div><small>WA:</small> ${u.phone || '-'}</div>
+            <div class="admin-item-actions">
+              ${u.status !== 'approved' ? `<button class="btn btn-success" id="app-u-${u.id}">Approve User</button>` : ''}
+              <button class="btn btn-danger" id="del-u-${u.id}">Hapus</button>
+            </div>
+          `;
+          wrapper.appendChild(item);
+
+          setTimeout(() => {
+            if (document.getElementById(`app-u-${u.id}`)) {
+              document.getElementById(`app-u-${u.id}`).onclick = async () => {
+                await updateDoc(doc(db, "users", u.id), { status: "approved" });
+                showToast(`User approved!`);
+                loadUsers();
+              };
+            }
+            document.getElementById(`del-u-${u.id}`).onclick = async () => {
+              await deleteDoc(doc(db, "users", u.id));
+              showToast("User dihapus.");
               loadUsers();
             };
-          }
-          document.getElementById(`del-u-${u.id}`).onclick = async () => {
-            await deleteDoc(doc(db, "users", u.id));
-            showToast("User dihapus.");
-            loadUsers();
-          };
-        }, 0);
-      });
+          }, 0);
+        });
+      } catch (err) {
+        wrapper.innerHTML = `<div>Gagal memuat user: ${err.message}</div>`;
+      }
     }
 
     const userModal = document.getElementById("user-modal");
@@ -375,12 +386,16 @@
       } catch (err) { showToast("Gagal: " + err.message, true); }
     };
 
-    // MODERASI USAHA
+    // 3. MODERASI USAHA
     async function loadBusinesses() {
-      const snap = await getDocs(collection(db, "businesses"));
-      allBusinesses = [];
-      snap.forEach(d => allBusinesses.push({ id: d.id, ...d.data() }));
-      renderBusinessesList();
+      try {
+        const snap = await getDocs(collection(db, "businesses"));
+        allBusinesses = [];
+        snap.forEach(d => allBusinesses.push({ id: d.id, ...d.data() }));
+        renderBusinessesList();
+      } catch (err) {
+        document.getElementById("business-cards-wrapper").innerHTML = `<div>Gagal memuat usaha: ${err.message}</div>`;
+      }
     }
 
     function renderBusinessesList() {
@@ -471,12 +486,16 @@
       document.getElementById("bp-last").onclick = () => { bCurrentPage = totalPages; renderBusinessesList(); };
     }
 
-    // GALERI
+    // 4. GALERI RANDOM
     async function loadGallery() {
-      const snap = await getDocs(collection(db, "adminGallery"));
-      allGallery = [];
-      snap.forEach(d => allGallery.push({ id: d.id, ...d.data() }));
-      renderGalleryGrid();
+      try {
+        const snap = await getDocs(collection(db, "adminGallery"));
+        allGallery = [];
+        snap.forEach(d => allGallery.push({ id: d.id, ...d.data() }));
+        renderGalleryGrid();
+      } catch (err) {
+        document.getElementById("gallery-grid-wrapper").innerHTML = `<div>Gagal memuat galeri: ${err.message}</div>`;
+      }
     }
 
     function renderGalleryGrid() {
