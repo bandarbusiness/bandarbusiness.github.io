@@ -421,7 +421,7 @@ function renderRoute() {
       const areaPhone = getAreaPhone(kabParam, kecParam);
       const phoneDisplay = areaPhone.startsWith('62') ? '0' + areaPhone.slice(2) : areaPhone;
       updateSEO(
-        `${phoneDisplay} Laundry Kiloan ${matchedKec.name} | Bersih & Wangi | ${matchedKab.name}`,
+        `${phoneDisplay} Laundry Kiloan ${matchedKec.name} | Sabun & Parfum | ${matchedKab.name}`,
         `Laundry kiloan di ${matchedKec.name}, ${matchedKab.name}. Mulai ${PRICING.defaultPricePerKg}/kg, express 6 jam, antar jemput gratis, garansi cuci ulang. Hubungi ${phoneDisplay}.`,
         `${ROUTE_MODULE}/${kabParam}/${kecParam}`
       );
