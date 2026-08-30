@@ -210,10 +210,10 @@ footer { background: var(--dark); color: rgba(255,255,255,.7); padding: 48px 0 2
       <div>
         <h3>Area Layanan Populer</h3>
         <ul>
-          <li><a href="#listing/laundry-bogor" onclick="navigate(event, 'listing/laundry-bogor')">Laundry Bogor</a></li>
-          <li><a href="#listing/laundry-bekasi" onclick="navigate(event, 'listing/laundry-bekasi')">Laundry Bekasi</a></li>
-          <li><a href="#listing/laundry-tangerang" onclick="navigate(event, 'listing/laundry-tangerang')">Laundry Tangerang</a></li>
-          <li><a href="#listing/laundry-bandung" onclick="navigate(event, 'listing/laundry-bandung')">Laundry Bandung</a></li>
+          <li><a href="#laundry/bogor" onclick="navigate(event, 'laundry/bogor')">Laundry Bogor</a></li>
+          <li><a href="#laundry/bekasi" onclick="navigate(event, 'laundry/bekasi')">Laundry Bekasi</a></li>
+          <li><a href="#laundry/tangerang" onclick="navigate(event, 'laundry/tangerang')">Laundry Tangerang</a></li>
+          <li><a href="#laundry/bandung" onclick="navigate(event, 'laundry/bandung')">Laundry Bandung</a></li>
         </ul>
       </div>
       <div>
@@ -234,12 +234,22 @@ footer { background: var(--dark); color: rgba(255,255,255,.7); padding: 48px 0 2
 
 <!-- SCRIPT ENGINE (HASH ROUTER — SINGLE PAGE, NO SERVER CONFIG NEEDED) -->
 <script>
-// URL Endpoint Eksternal JS
+// URL Endpoint Eksternal JS & CSV
 const EXTERNAL_CONFIG_JS = "https://cdn.jsdelivr.net/gh/situslaundry/jsf@main/listing/config.js";
 const EXTERNAL_DATA_WILAYAH_JS = "https://cdn.jsdelivr.net/gh/situslaundry/jsf@main/listing/dataWilayah.js";
+// CSV format (header opsional): kabupaten,kecamatan,telepon
+// Baris dengan kecamatan kosong berlaku sebagai nomor fallback untuk seluruh kabupaten tsb.
+// Contoh:
+//   kabupaten,kecamatan,telepon
+//   bogor,cileungsi,6285773009666
+//   bogor,,6281234567890
+const EXTERNAL_PHONE_CSV = "https://cdn.jsdelivr.net/gh/situslaundry/jsf@main/listing/dataTelepon.csv";
 
-// Nama modul dipakai sebagai segmen pertama hash: #listing/[slug-kabupaten]/[slug-kecamatan]
-const ROUTE_MODULE = "listing";
+// Nama modul dipakai sebagai segmen pertama hash: #laundry/[slug-kabupaten]/[slug-kecamatan]
+const ROUTE_MODULE = "laundry";
+
+// Lookup nomor telepon per wilayah, diisi dari CSV eksternal saat boot
+let PHONE_DATA = {};
 
 // Tetapan Harga Template (Hanya nomor telepon yang diatur dari config eksternal)
 const PRICING = {
@@ -269,6 +279,58 @@ function getPhone() {
 }
 function getDataWilayah() {
   return window.DATA_WILAYAH || {};
+}
+
+// 2b. Slug bersih untuk URL: hilangkan prefix "laundry-" dan suffix nama kabupaten
+//     agar #listing/laundry-bogor/laundry-cileungsi-bogor -> #laundry/bogor/cileungsi
+function stripLaundryPrefix(slug) {
+  return (slug || '').replace(/^laundry-/, '');
+}
+function kabUrlSlug(kab) {
+  return stripLaundryPrefix(kab.slug);
+}
+function kecUrlSlug(kab, kec) {
+  const kabCore = kabUrlSlug(kab);
+  let s = stripLaundryPrefix(kec.slug);
+  const suffix = `-${kabCore}`;
+  if (kabCore && s.endsWith(suffix)) {
+    s = s.slice(0, -suffix.length);
+  }
+  return s;
+}
+
+// 2c. Loader & parser CSV nomor telepon per wilayah
+function loadExternalCSV(url) {
+  return fetch(url)
+    .then(res => (res && res.ok) ? res.text() : '')
+    .catch(() => {
+      console.warn("Gagal memuat data telepon CSV: " + url + ". Menggunakan nomor fallback.");
+      return '';
+    });
+}
+function parseCSV(text) {
+  const map = {};
+  if (!text) return map;
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  for (const line of lines) {
+    const cols = line.split(',').map(c => c.trim());
+    if (cols.length < 3) continue;
+    const [kabRaw, kecRaw, phoneRaw] = cols;
+    if (/kabupaten/i.test(kabRaw) && /kecamatan/i.test(kecRaw)) continue; // lewati baris header
+    const phone = (phoneRaw || '').replace(/[^0-9]/g, '');
+    if (!kabRaw || !phone) continue;
+    const key = `${kabRaw.toLowerCase()}|${kecRaw.toLowerCase()}`;
+    map[key] = phone;
+  }
+  return map;
+}
+// Cari nomor telepon paling spesifik: kecamatan -> fallback kabupaten -> fallback global
+function getAreaPhone(kabSlug, kecSlug) {
+  const kabKey = (kabSlug || '').toLowerCase();
+  const kecKey = (kecSlug || '').toLowerCase();
+  if (kecKey && PHONE_DATA[`${kabKey}|${kecKey}`]) return PHONE_DATA[`${kabKey}|${kecKey}`];
+  if (PHONE_DATA[`${kabKey}|`]) return PHONE_DATA[`${kabKey}|`];
+  return getPhone();
 }
 
 function updateStaticUI() {
@@ -333,18 +395,20 @@ function renderRoute() {
     );
     app.innerHTML = renderHomePage(phone, dataWilayah);
   } else if (parts[0] === ROUTE_MODULE && parts.length >= 2) {
-    const kabSlug = parts[1];
-    const kecSlug = parts[2];
+    const kabParam = parts[1];
+    const kecParam = parts[2];
     let matchedKab = null;
     let matchedKec = null;
 
     for (let kabKey in dataWilayah) {
-      if (dataWilayah[kabKey].slug === kabSlug) {
-        matchedKab = dataWilayah[kabKey];
-        if (kecSlug) {
+      const kab = dataWilayah[kabKey];
+      if (kabUrlSlug(kab) === kabParam) {
+        matchedKab = kab;
+        if (kecParam) {
           for (let kecKey in matchedKab.kecamatan) {
-            if (matchedKab.kecamatan[kecKey].slug === kecSlug) {
-              matchedKec = matchedKab.kecamatan[kecKey];
+            const kec = matchedKab.kecamatan[kecKey];
+            if (kecUrlSlug(matchedKab, kec) === kecParam) {
+              matchedKec = kec;
               break;
             }
           }
@@ -353,20 +417,24 @@ function renderRoute() {
       }
     }
 
-    if (matchedKab && kecSlug && matchedKec) {
+    if (matchedKab && kecParam && matchedKec) {
+      const areaPhone = getAreaPhone(kabParam, kecParam);
+      const phoneDisplay = areaPhone.startsWith('62') ? '0' + areaPhone.slice(2) : areaPhone;
       updateSEO(
-        `Laundry Kiloan ${matchedKec.name} — Bersih & Wangi | Laundry Listing ${matchedKab.name}`,
-        `Laundry kiloan di ${matchedKec.name}, ${matchedKab.name}. Mulai ${PRICING.defaultPricePerKg}/kg, express 6 jam, antar jemput gratis, garansi cuci ulang.`,
-        `${ROUTE_MODULE}/${matchedKab.slug}/${matchedKec.slug}`
+        `${phoneDisplay} Laundry Kiloan ${matchedKec.name} | Bersih & Wangi | ${matchedKab.name}`,
+        `Laundry kiloan di ${matchedKec.name}, ${matchedKab.name}. Mulai ${PRICING.defaultPricePerKg}/kg, express 6 jam, antar jemput gratis, garansi cuci ulang. Hubungi ${phoneDisplay}.`,
+        `${ROUTE_MODULE}/${kabParam}/${kecParam}`
       );
-      app.innerHTML = renderKecamatanPage(phone, matchedKab, matchedKec);
-    } else if (matchedKab && !kecSlug) {
+      app.innerHTML = renderKecamatanPage(areaPhone, matchedKab, matchedKec);
+    } else if (matchedKab && !kecParam) {
+      const areaPhone = getAreaPhone(kabParam, null);
+      const phoneDisplay = areaPhone.startsWith('62') ? '0' + areaPhone.slice(2) : areaPhone;
       updateSEO(
-        `Laundry Listing ${matchedKab.name} — Direktori Laundry Kiloan | Antar Jemput`,
-        `Layanan laundry kiloan terpercaya di seluruh ${matchedKab.name}. Mulai ${PRICING.defaultPricePerKg}/kg, express 6 jam, melayani seluruh kecamatan.`,
-        `${ROUTE_MODULE}/${matchedKab.slug}`
+        `${phoneDisplay} Laundry Listing ${matchedKab.name} — Direktori Laundry Kiloan | Antar Jemput`,
+        `Layanan laundry kiloan terpercaya di seluruh ${matchedKab.name}. Mulai ${PRICING.defaultPricePerKg}/kg, express 6 jam, melayani seluruh kecamatan. Hubungi ${phoneDisplay}.`,
+        `${ROUTE_MODULE}/${kabParam}`
       );
-      app.innerHTML = renderKabupatenPage(phone, matchedKab);
+      app.innerHTML = renderKabupatenPage(areaPhone, matchedKab);
     } else {
       app.innerHTML = renderNotFound();
     }
@@ -391,7 +459,7 @@ function renderHomePage(phone, dataWilayah) {
   const kabKeys = Object.keys(dataWilayah);
   const kabGridHtml = kabKeys.map(key => {
     const kab = dataWilayah[key];
-    const slug = `${ROUTE_MODULE}/${kab.slug}`;
+    const slug = `${ROUTE_MODULE}/${kabUrlSlug(kab)}`;
     return `
       <a href="#${slug}" class="listing-card" onclick="navigate(event, '${slug}')">
         <div class="listing-icon">🧺</div>
@@ -470,7 +538,7 @@ function renderKabupatenPage(phone, kab) {
   const kecKeys = Object.keys(kab.kecamatan || {});
   const kecGridHtml = kecKeys.map(key => {
     const kec = kab.kecamatan[key];
-    const slug = `${ROUTE_MODULE}/${kab.slug}/${kec.slug}`;
+    const slug = `${ROUTE_MODULE}/${kabUrlSlug(kab)}/${kecUrlSlug(kab, kec)}`;
     return `
       <a href="#${slug}" class="listing-card" onclick="navigate(event, '${slug}')">
         <div class="listing-icon">📍</div>
@@ -530,12 +598,12 @@ function renderKecamatanPage(phone, kab, kec) {
   const otherKecKeys = Object.keys(kab.kecamatan || {}).filter(k => kab.kecamatan[k].slug !== kec.slug);
   const otherKecHtml = otherKecKeys.map(k => {
     const item = kab.kecamatan[k];
-    const slug = `${ROUTE_MODULE}/${kab.slug}/${item.slug}`;
+    const slug = `${ROUTE_MODULE}/${kabUrlSlug(kab)}/${kecUrlSlug(kab, item)}`;
     return `<li><a href="#${slug}" onclick="navigate(event, '${slug}')">🧺 Laundry ${item.name}</a></li>`;
   }).join('');
 
   const desaTagsHtml = (kec.desa || []).map(d => `<span class="desa-tag">📍 ${d}</span>`).join('');
-  const kabSlug = `${ROUTE_MODULE}/${kab.slug}`;
+  const kabSlug = `${ROUTE_MODULE}/${kabUrlSlug(kab)}`;
 
   return `
     <div class="breadcrumb-wrap">
@@ -778,6 +846,8 @@ function initFAQ() {
 async function initApp() {
   await loadExternalScript(EXTERNAL_CONFIG_JS);
   await loadExternalScript(EXTERNAL_DATA_WILAYAH_JS);
+  const csvText = await loadExternalCSV(EXTERNAL_PHONE_CSV);
+  PHONE_DATA = parseCSV(csvText);
   updateStaticUI();
   renderRoute();
 }
