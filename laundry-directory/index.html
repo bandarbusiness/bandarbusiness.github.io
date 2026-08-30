@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="seo-title">Laundry Directory — Cari Laundry, Cuci Sepatu & Cleaning Terdekat</title>
+  <meta id="seo-desc" name="description" content="Temukan tempat laundry kiloan, cuci sepatu, home cleaning, cuci sofa, dan jasa kebersihan terdekat berbasis peta interaktif.">
+  <link id="seo-canonical" rel="canonical" href="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --header-bg: #1e3a8a;
+      --header-text: #ffffff;
+      --footer-bg: #f97316;
+      --footer-text: #000000;
+      --bg: #ffffff;
+      --surface: #ffffff;
+      --text: #000000;
+      --text-muted: #4b5563;
+      --border: #e5e7eb;
+      --primary: #0284c7;
+      --card-bg: #ffffff;
+    }
+    body.dark-mode {
+      --header-bg: #0f172a;
+      --header-text: #ffffff;
+      --footer-bg: #c2410c;
+      --footer-text: #ffffff;
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --primary: #38bdf8;
+      --card-bg: #1e293b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; transition: background 0.3s, color 0.3s; }
+    header { background: var(--header-bg); color: var(--header-text); padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 0.8rem; }
+    header h1 a { color: var(--header-text); text-decoration: none; font-size: 1.25rem; font-weight: 700; cursor: pointer; }
+    .header-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .btn { padding: 0.5rem 0.9rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-secondary { background: #e2e8f0; color: #0f172a; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-success { background: #16a34a; color: white; }
+    .btn-dark { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); }
+    
+    #map-container { width: 100%; height: 380px; background: #cbd5e1; z-index: 1; }
+    .container { max-width: 1000px; margin: 1rem auto; padding: 0 1rem; width: 100%; flex: 1; }
+    .controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .controls input { flex: 1; min-width: 200px; padding: 0.6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+    .card { background: var(--card-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.5rem; }
+    .card-img { width: 100%; height: 160px; object-fit: cover; border-radius: 6px; }
+    .card-title { color: var(--primary); font-weight: 700; text-decoration: none; font-size: 1.05rem; cursor: pointer; }
+    .badge { background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; width: fit-content; cursor: pointer; text-decoration: none; display: inline-block; }
+    .badge:hover { opacity: 0.8; }
+    
+    .pagination { display: flex; justify-content: center; gap: 0.3rem; margin: 1.5rem 0; flex-wrap: wrap; }
+    .page-btn { padding: 0.4rem 0.8rem; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 4px; cursor: pointer; }
+    .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    
+    .ad-slot-container { width: 100%; max-width: 1000px; margin: 0.8rem auto; padding: 0 1rem; }
+    .ad-banner-link { display: block; width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .ad-banner-img { width: 100%; height: auto; max-height: 180px; object-fit: cover; display: block; }
+    
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+    
+    /* Modal & Toast */
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; padding: 1rem; }
+    .modal.active { display: flex; }
+    .modal-content { background: var(--surface); color: var(--text); border-radius: 8px; width: 100%; max-width: 550px; max-height: 90vh; overflow-y: auto; padding: 1.5rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.8rem; }
+    .form-group input, .form-group select { padding: 0.6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); width: 100%; }
+    #picker-map { width: 100%; height: 200px; border-radius: 6px; border: 1px solid var(--border); margin-top: 0.3rem; }
+
+    footer { background: var(--footer-bg); color: var(--footer-text); padding: 1.5rem 1rem; margin-top: auto; border-top: 1px solid var(--border); }
+    .footer-container { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; align-items: center; text-align: center; }
+    .footer-links { display: flex; gap: 1.2rem; flex-wrap: wrap; justify-content: center; }
+    .footer-links a { color: var(--footer-text); text-decoration: none; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
+    .copyright { font-size: 0.85rem; opacity: 0.9; }
+    @media (min-width: 640px) { .footer-container { flex-direction: row; justify-content: space-between; text-align: left; } }
+
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 0.8rem 1.5rem; border-radius: 999px; font-size: 0.85rem; font-weight: 600; z-index: 3000; display: none; text-align: center; max-width: 90%; }
+    .toast.error { background: #ef4444; }
+    .toast.success { background: #16a34a; }
+    .toast.warning { background: #f59e0b; color: #000; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1><a onclick="navigateTo('')">Laundry Directory</a></h1>
+      <small style="opacity: 0.8;" id="user-status-text">Memuat status...</small>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-dark" id="dark-mode-toggle">🌙 Mode Gelap</button>
+      <div id="auth-buttons-wrapper">
+        <a onclick="navigateTo('auth')" class="btn btn-primary" style="cursor:pointer;">🔑 Login / Register</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Top Advertisement Slot -->
+  <div id="ad-slot-top" class="ad-slot-container"></div>
+
+  <!-- Interactive Map Container (Only on Home/Directory views) -->
+  <div id="map-container-wrapper">
+    <div id="map"></div>
+  </div>
+
+  <main class="container">
+    <!-- VIEW 1: HOME / DIRECTORY (Default: #) -->
+    <section id="view-home" class="view-section active">
+      <div class="controls">
+        <input type="text" id="search" placeholder="Cari laundry, cuci sepatu, kota...">
+        <button id="add-data-btn" class="btn btn-primary" style="display:none;">+ Tambah Usaha</button>
+      </div>
+      <div id="data-list" class="grid">
+        <div style="grid-column: 1/-1; text-align: center; padding: 2rem;">Memuat data usaha...</div>
+      </div>
+      <div class="pagination" id="pagination" style="display: none;">
+        <button class="page-btn" id="p-first">&lt;&lt;</button>
+        <button class="page-btn" id="p-prev">&lt;</button>
+        <div id="p-numbers" style="display: flex; gap: 0.3rem;"></div>
+        <button class="page-btn" id="p-next">&gt;</button>
+        <button class="page-btn" id="p-last">&gt;&gt;</button>
+      </div>
+    </section>
+
+    <!-- VIEW 2: KATEGORI / WILAYAH (Level 1, 2, & 3 Dynamic Content Container) -->
+    <section id="view-dynamic" class="view-section">
+      <div id="dynamic-content-wrapper">
+        <!-- Konten Detail atau Daftar Kategori/Wilayah dimuat secara dinamis via Hash Routing -->
+      </div>
+    </section>
+
+    <!-- VIEW 3: ABOUT -->
+    <section id="view-about" class="view-section">
+      <article class="card" style="padding: 2rem; line-height: 1.6;">
+        <h1 style="color:var(--primary); font-size: 1.5rem;">Tentang Laundry Directory V2.0</h1>
+        <p><strong>Laundry Directory V2.0</strong> adalah platform katalog digital berbasis peta interaktif yang dirancang untuk membantu masyarakat menemukan jasa laundry dan layanan kebersihan profesional terdekat di seluruh wilayah Indonesia.</p>
+        <p>Aplikasi ini memadukan kemudahan pemetaan lokasi interaktif dengan direktori terstruktur, sehingga pengguna dapat menemukan penyedia jasa laundry kiloan, cuci satuan, cuci sepatu, cuci sofa, hingga jasa kebersihan rumah secara cepat dan akurat.</p>
+      </article>
+    </section>
+
+    <!-- VIEW 4: CONTACT -->
+    <section id="view-contact" class="view-section">
+      <article class="card" style="padding: 2rem; line-height: 1.6;">
+        <h1 style="color:var(--primary); font-size: 1.5rem;">Hubungi Kami</h1>
+        <p>Jika Anda memiliki pertanyaan mengenai pendaftaran usaha, klaim lokasi, verifikasi, atau bantuan teknis lainnya, silakan hubungi tim kami melalui saluran resmi di bawah ini:</p>
+        <div style="padding: 1rem; background: rgba(0,0,0,0.03); border-radius: 6px; border: 1px solid var(--border); margin-top: 0.5rem;">
+          <strong>📧 Email Resmi Admin:</strong>
+          <p>bandardeterjen@gmail.com</p>
+        </div>
+        <div style="padding: 1rem; background: rgba(0,0,0,0.03); border-radius: 6px; border: 1px solid var(--border); margin-top: 0.5rem;">
+          <strong>💬 WhatsApp Customer Support:</strong>
+          <p>+62 857-1234-5678</p>
+        </div>
+      </article>
+    </section>
+
+    <!-- VIEW 5: AUTH (Login / Register) -->
+    <section id="view-auth" class="view-section" style="max-width: 420px; margin: 0 auto;">
+      <div class="card" style="padding: 1.5rem;">
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border);">
+          <button class="btn btn-secondary" id="tab-login-btn" style="flex:1;">Login</button>
+          <button class="btn btn-secondary" id="tab-reg-btn" style="flex:1;">Registrasi</button>
+        </div>
+        <!-- Login Form -->
+        <form id="login-form">
+          <div class="form-group"><label>Email</label><input type="email" id="login-email" required></div>
+          <div class="form-group"><label>Password</label><input type="password" id="login-password" required></div>
+          <button type="submit" class="btn btn-primary" style="width:100%;">Masuk (Login)</button>
+        </form>
+        <!-- Register Form -->
+        <form id="register-form" style="display:none;">
+          <div class="form-group"><label>Nama Lengkap Owner</label><input type="text" id="reg-name" required></div>
+          <div class="form-group"><label>Email</label><input type="email" id="reg-email" required></div>
+          <div class="form-group"><label>Nomor WhatsApp</label><input type="text" id="reg-phone" required placeholder="085712345678"></div>
+          <div class="form-group"><label>Password</label><input type="password" id="reg-password" required minlength="6"></div>
+          <button type="submit" class="btn btn-primary" style="width:100%;">Daftar Akun Owner</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- VIEW 6: ADMIN PANEL -->
+    <section id="view-admin" class="view-section">
+      <div class="card" style="padding: 1.5rem;">
+        <h2 style="color:var(--primary); margin-bottom: 1rem;">Admin Dashboard</h2>
+        <div id="admin-content-wrapper">Memuat panel admin...</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom Advertisement Slot -->
+  <div id="ad-slot-bottom" class="ad-slot-container"></div>
+
+  <footer>
+    <div class="footer-container">
+      <div class="footer-links">
+        <a onclick="navigateTo('about')">Tentang Kami</a>
+        <a onclick="navigateTo('contact')">Kontak</a>
+        <a onclick="navigateTo('auth')">Login / Registrasi</a>
+      </div>
+      <div class="copyright">
+        &copy; <span id="current-year"></span> Laundry Directory. Hak Cipta Dilindungi.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal Tambah/Edit Usaha -->
+  <div class="modal" id="add-modal">
+    <div class="modal-content">
+      <h2 style="color:var(--primary); margin-bottom:1rem;" id="modal-title">Tambah Usaha Baru</h2>
+      <form id="add-form">
+        <input type="hidden" id="f-id">
+        <div class="form-group"><label>Nama Usaha</label><input type="text" id="f-name" required placeholder="Contoh: Mida Laundry"></div>
+        <div class="form-group"><label>Kategori</label>
+          <select id="f-category" required>
+            <option value="Laundry Kiloan">Laundry Kiloan</option>
+            <option value="Laundry Satuan">Laundry Satuan</option>
+            <option value="Cuci Sepatu">Cuci Sepatu</option>
+            <option value="Cuci Sofa">Cuci Sofa</option>
+            <option value="Home Cleaning">Home Cleaning</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Kota / Wilayah (Slug Wilayah)</label><input type="text" id="f-city" required placeholder="Setu Bekasi Kabupaten"></div>
+        <div class="form-group"><label>Alamat Jalan</label><input type="text" id="f-address" required placeholder="Jl. Raya Setu No. 1"></div>
+        <div class="form-group"><label>URL Gambar/Foto Usaha</label><input type="url" id="f-img" required placeholder="https://images.unsplash.com/..."></div>
+        <div class="form-group">
+          <label>Pilih Lokasi di Peta</label>
+          <div id="picker-map"></div>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
+          <div class="form-group"><label>Latitude</label><input type="number" step="any" id="f-lat" required readonly></div>
+          <div class="form-group"><label>Longitude</label><input type="number" step="any" id="f-lng" required readonly></div>
+        </div>
+        <div class="form-group"><label>WhatsApp (Nomor Telpon)</label><input type="text" id="f-wa" required placeholder="087797717660"></div>
+        <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+          <button type="submit" class="btn btn-primary" style="flex:1;">Simpan Data Usaha</button>
+          <button type="button" class="btn btn-secondary" id="close-modal-btn">Batal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Leaflet & Firebase Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAY2JOM_GK_c8MIKOOROjG61XtC-VxF3Gc",
+      authDomain: "laundry-directory-1915d.firebaseapp.com",
+      projectId: "laundry-directory-1915d",
+      storageBucket: "laundry-directory-1915d.appspot.com",
+      messagingSenderId: "336437234560",
+      appId: "1:336437234560:web:69dc7cbb36704c9f614f65"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    let mainMap, mainMarkersGroup, pickerMap, pickerMarker;
+    let rawData = [], filteredData = [], galleryImages = [];
+    let currentPage = 1;
+    const PER_PAGE = 12;
+    let currentUser = null, isAdminUser = false;
+
+    // Helper Toast Notification (Tanpa pop-up untuk load halaman)
+    window.showToast = function(msg, type = "success") {
+      const toast = document.getElementById("toast");
+      if (!toast) return;
+      toast.innerText = msg;
+      toast.className = `toast ${type}`;
+      toast.style.display = "block";
+      setTimeout(() => { toast.style.display = "none"; }, 3500);
+    }
+
+    window.navigateTo = function(hashPath) {
+      window.location.hash = hashPath;
+    }
+
+    function createSlug(text) {
+      return text ? text.toString().toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '') : '';
+    }
+
+    document.getElementById("current-year").innerText = new Date().getFullYear();
+
+    // Dark Mode Toggle
+    const darkToggle = document.getElementById("dark-mode-toggle");
+    if (localStorage.getItem("theme") === "dark") {
+      document.body.classList.add("dark-mode");
+      darkToggle.innerText = "☀️ Mode Terang";
+    }
+    darkToggle.onclick = () => {
+      document.body.classList.toggle("dark-mode");
+      const isDark = document.body.classList.contains("dark-mode");
+      localStorage.setItem("theme", isDark ? "dark" : "light");
+      darkToggle.innerText = isDark ? "☀️ Mode Terang" : "🌙 Mode Gelap";
+    };
+
+    // Routing Manager Berbasis Hash (#) sesuai struktur Level 1, 2, dan 3
+    window.addEventListener("hashchange", handleRouting);
+    window.addEventListener("DOMContentLoaded", async () => {
+      await loadData();
+      handleRouting();
+    });
+
+    async function handleRouting() {
+      const hash = window.location.hash.replace("#", "") || "";
+      const segments = hash.split("/").filter(Boolean);
+
+      // Sembunyikan semua section utama dulu
+      document.querySelectorAll(".view-section").forEach(sec => sec.classList.remove("active"));
+      const mapWrapper = document.getElementById("map-container-wrapper");
+
+      // Routing Rules
+      if (hash === "" || hash === "home") {
+        document.getElementById("view-home").classList.add("active");
+        mapWrapper.style.display = "block";
+        if (mainMap) mainMap.invalidateSize();
+        document.title = "Laundry Directory — Cari Laundry, Cuci Sepatu & Cleaning Terdekat";
+      } else if (segments[0] === "about") {
+        document.getElementById("view-about").classList.add("active");
+        mapWrapper.style.display = "none";
+        document.title = "Tentang Kami — Laundry Directory";
+      } else if (segments[0] === "contact") {
+        document.getElementById("view-contact").classList.add("active");
+        mapWrapper.style.display = "none";
+        document.title = "Kontak Kami — Laundry Directory";
+      } else if (segments[0] === "auth") {
+        document.getElementById("view-auth").classList.add("active");
+        mapWrapper.style.display = "none";
+        document.title = "Login / Registrasi — Laundry Directory";
+      } else if (segments[0] === "admin") {
+        document.getElementById("view-admin").classList.add("active");
+        mapWrapper.style.display = "none";
+        document.title = "Admin Dashboard — Laundry Directory";
+        renderAdminDashboard();
+      } else {
+        // Hash bernavigasi kompleks: Level 1, Level 2, atau Level 3 Detail Entitas
+        mapWrapper.style.display = "none";
+        document.getElementById("view-dynamic").classList.add("active");
+        await handleDynamicRouting(segments);
+      }
+    }
+
+    // Dynamic Routing handler untuk Level 1, 2, dan 3
+    async function handleDynamicRouting(segments) {
+      const wrapper = document.getElementById("dynamic-content-wrapper");
+      const modul = segments[0]; // e.g. 'detail' atau 'kategori'
+      const param1 = segments[1]; // slug kategori (misal: laundry-kiloan)
+      const param2 = segments[2]; // slug wilayah/sub (misal: setu-bekasi-kabupaten)
+      const param3 = segments[3]; // slug item spesifik (misal: mida-laundry)
+
+      if (modul === "detail" && param3) {
+        // LEVEL 3: Detail Entitas Spesifik (Contoh: #detail/laundry-kiloan/setu-bekasi-kabupaten/mida-laundry)
+        const business = rawData.find(d => createSlug(d.name) === param3);
+        if (!business) {
+          wrapper.innerHTML = `<h2 style="color:#ef4444;">Usaha Tidak Ditemukan</h2><p>Data usaha dengan slug tersebut tidak tersedia.</p>`;
+          showToast("Data usaha tidak ditemukan", "error");
+          return;
+        }
+
+        // Khusus Mida Laundry / sesuai permintaan title dengan nomor telepon
+        const phoneNo = business.whatsapp || "087797717660";
+        document.title = `${phoneNo} ${business.name} ${business.city || ''}`;
+        
+        const waNum = business.whatsapp ? business.whatsapp.replace(/[^0-9]/g, '') : '6287797717660';
+        const waUrl = `https://wa.me/${waNum}?text=${encodeURIComponent("Halo, saya menemukan usaha Anda via Laundry Directory.")}`;
+        
+        wrapper.innerHTML = `
+          <article class="card" style="padding: 1.5rem;">
+            <span class="badge" onclick="navigateTo('detail/${createSlug(business.category)}')">${business.category}</span>
+            <h1 style="color:var(--primary); font-size:1.5rem; margin-top:0.5rem;">${business.name} ${business.city || ''}</h1>
+            <p style="color:var(--text-muted);">${business.description || 'Layanan profesional, cepat, dan terpercaya.'}</p>
+            <hr style="border:0; border-top:1px solid var(--border); margin:0.8rem 0;">
+            <div style="font-size:0.9rem; display:flex; flex-direction:column; gap:6px;">
+              <div><strong>📍 Alamat:</strong> ${business.address}, <a onclick="navigateTo('detail/${createSlug(business.category)}/${createSlug(business.city)}')" style="color:var(--primary); cursor:pointer;">${business.city}</a></div>
+              <div><strong>💬 WhatsApp:</strong> ${business.whatsapp || '-'}</div>
+            </div>
+            <div style="display:flex; gap:0.75rem; margin-top:1rem;">
+              <a href="${waUrl}" target="_blank" class="btn btn-success" style="flex:1;">💬 WhatsApp</a>
+              <button onclick="navigateTo('')" class="btn btn-secondary">← Kembali ke Beranda</button>
+            </div>
+          </article>
+        `;
+        showToast("Detail usaha berhasil dimuat", "success");
+
+      } else if (param1 && !param2) {
+        // LEVEL 1: Detail Entitas Kategori (Contoh: #detail/laundry-kiloan atau #kategori/laundry-kiloan)
+        const matchedItems = rawData.filter(d => createSlug(d.category) === param1);
+        document.title = `Daftar ${param1.replace(/-/g, ' ')} — Laundry Directory`;
+        wrapper.innerHTML = `
+          <h2 style="color:var(--primary); margin-bottom:1rem;">Daftar Usaha Kategori: ${param1.replace(/-/g, ' ')}</h2>
+          <div class="grid">
+            ${matchedItems.length > 0 ? matchedItems.map(d => `
+              <div class="card">
+                <img src="${d.imageUrl || 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=600'}" class="card-img" alt="${d.name}">
+                <a onclick="navigateTo('detail/${createSlug(d.category)}/${createSlug(d.city)}/${createSlug(d.name)}')" class="card-title">${d.name}</a>
+                <small style="color:var(--text-muted);">📍 ${d.address}, ${d.city}</small>
+              </div>
+            `).join('') : '<p>Tidak ada usaha dalam kategori ini.</p>'}
+          </div>
+          <button onclick="navigateTo('')" class="btn btn-secondary" style="margin-top:1rem;">← Kembali ke Beranda</button>
+        `;
+      } else if (param1 && param2) {
+        // LEVEL 2: Detail Entitas Kategori & Wilayah (Contoh: #detail/laundry-kiloan/setu-bekasi-kabupaten)
+        const matchedItems = rawData.filter(d => createSlug(d.category) === param1 && createSlug(d.city) === param2);
+        document.title = `Laundry ${param1} di ${param2} — Laundry Directory`;
+        wrapper.innerHTML = `
+          <h2 style="color:var(--primary); margin-bottom:1rem;">Usaha ${param1.replace(/-/g, ' ')} di Wilayah ${param2.replace(/-/g, ' ')}</h2>
+          <div class="grid">
+            ${matchedItems.length > 0 ? matchedItems.map(d => `
+              <div class="card">
+                <img src="${d.imageUrl || 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=600'}" class="card-img" alt="${d.name}">
+                <a onclick="navigateTo('detail/${createSlug(d.category)}/${createSlug(d.city)}/${createSlug(d.name)}')" class="card-title">${d.name}</a>
+                <small style="color:var(--text-muted);">📍 ${d.address}, ${d.city}</small>
+              </div>
+            `).join('') : '<p>Tidak ada usaha ditemukan pada wilayah ini.</p>'}
+          </div>
+          <button onclick="navigateTo('')" class="btn btn-secondary" style="margin-top:1rem;">← Kembali ke Beranda</button>
+        `;
+      }
+    }
+
+    // Load Data dari Firestore
+    async function loadData() {
+      try {
+        const snap = await getDocs(collection(db, "businesses"));
+        rawData = [];
+        snap.forEach(d => rawData.push({ id: d.id, ...d.data() }));
+        applyFilter();
+      } catch (err) {
+        console.error("Error loading data:", err);
+      }
+    }
+
+    function applyFilter() {
+      const kw = document.getElementById("search")?.value.toLowerCase().trim() || "";
+      filteredData = rawData.filter(d => `${d.name} ${d.category} ${d.city} ${d.address}`.toLowerCase().includes(kw));
+      currentPage = 1;
+      updateMapMarkers();
+      renderList();
+    }
+
+    document.getElementById("search")?.addEventListener("input", applyFilter);
+
+    function initMainMap() {
+      if (mainMap) return;
+      mainMap = L.map('map').setView([-6.4025, 106.9680], 11);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mainMap);
+      mainMarkersGroup = L.layerGroup().addTo(mainMap);
+    }
+
+    function updateMapMarkers() {
+      initMainMap();
+      if (!mainMarkersGroup) return;
+      mainMarkersGroup.clearLayers();
+      filteredData.forEach(d => {
+        if (d.latitude && d.longitude) {
+          const catSlug = createSlug(d.category);
+          const citySlug = createSlug(d.city);
+          const nameSlug = createSlug(d.name);
+          const detailHash = `detail/${catSlug}/${citySlug}/${nameSlug}`;
+          
+          const m = L.marker([d.latitude, d.longitude]);
+          m.bindPopup(`<b>${d.name}</b><br>${d.category}<br>📍 ${d.city}<br><a onclick="navigateTo('${detailHash}')" style="color:var(--primary); cursor:pointer;">Buka Detail</a>`);
+          mainMarkersGroup.addLayer(m);
+        }
+      });
+    }
+
+    function renderList() {
+      const listEl = document.getElementById("data-list");
+      if (!listEl) return;
+      listEl.innerHTML = "";
+      if (filteredData.length === 0) {
+        listEl.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:2rem;">Belum ada data usaha terdaftar.</div>`;
+        return;
+      }
+      filteredData.forEach(d => {
+        const catSlug = createSlug(d.category);
+        const citySlug = createSlug(d.city);
+        const nameSlug = createSlug(d.name);
+        const detailHash = `detail/${catSlug}/${citySlug}/${nameSlug}`;
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <img src="${d.imageUrl || 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=600'}" class="card-img" alt="${d.name}">
+          <a class="badge" onclick="navigateTo('detail/${catSlug}')">${d.category}</a>
+          <a onclick="navigateTo('${detailHash}')" class="card-title">${d.name}</a>
+          <small style="color:var(--text-muted);" onclick="navigateTo('detail/${catSlug}/${citySlug}')" style="cursor:pointer;">📍 ${d.address}, ${d.city}</small>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+
+    // Autentikasi State & Toggle Form Login/Register
+    const tabLoginBtn = document.getElementById("tab-login-btn");
+    const tabRegBtn = document.getElementById("tab-reg-btn");
+    const loginForm = document.getElementById("login-form");
+    const regForm = document.getElementById("register-form");
+
+    tabLoginBtn?.addEventListener("click", () => {
+      loginForm.style.display = "block";
+      regForm.style.display = "none";
+    });
+    tabRegBtn?.addEventListener("click", () => {
+      loginForm.style.display = "none";
+      regForm.style.display = "block";
+    });
+
+    loginForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await signInWithEmailAndPassword(auth, document.getElementById("login-email").value, document.getElementById("login-password").value);
+        showToast("Login Berhasil!", "success");
+        navigateTo("");
+      } catch (err) {
+        showToast("Gagal Login: " + err.message, "error");
+      }
+    });
+
+    regForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await createUserWithEmailAndPassword(auth, document.getElementById("reg-email").value, document.getElementById("reg-password").value);
+        showToast("Registrasi Berhasil! Silakan Login.", "success");
+        tabLoginBtn.click();
+      } catch (err) {
+        showToast("Gagal Registrasi: " + err.message, "error");
+      }
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+      const statusText = document.getElementById("user-status-text");
+      const authWrapper = document.getElementById("auth-buttons-wrapper");
+      const addBtn = document.getElementById("add-data-btn");
+      if (user) {
+        statusText.innerText = `Logged in: ${user.email}`;
+        isAdminUser = (user.email === 'bandardeterjen@gmail.com');
+        authWrapper.innerHTML = `
+          ${isAdminUser ? `<a onclick="navigateTo('admin')" class="btn btn-primary" style="cursor:pointer;">Dashboard Admin</a>` : ''}
+          <button class="btn btn-danger" id="logout-btn">Logout</button>
+        `;
+        if (addBtn) addBtn.style.display = "inline-block";
+        document.getElementById("logout-btn").onclick = async () => {
+          await signOut(auth);
+          showToast("Berhasil Logout", "success");
+          navigateTo("");
+        };
+      } else {
+        statusText.innerText = "Peta & Katalog Usaha";
+        authWrapper.innerHTML = `<a onclick="navigateTo('auth')" class="btn btn-primary" style="cursor:pointer;">🔑 Login / Register</a>`;
+        if (addBtn) addBtn.style.display = "none";
+      }
+    });
+
+    function renderAdminDashboard() {
+      const adminWrapper = document.getElementById("admin-content-wrapper");
+      if (!adminWrapper) return;
+      if (!isAdminUser) {
+        adminWrapper.innerHTML = `<p style="color:#ef4444;">Akses Ditolak. Anda bukan Admin.</p>`;
+        return;
+      }
+      adminWrapper.innerHTML = `
+        <p>Selamat datang di Panel Admin. Anda dapat memoderasi daftar usaha dan mengelola konfigurasi sistem di sini.</p>
+        <button onclick="navigateTo('')" class="btn btn-secondary" style="margin-top:1rem;">Kembali ke Beranda</button>
+      `;
+    }
+  </script>
+</body>
+</html>
